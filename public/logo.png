@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <path id="textPathTop" d="M 75 250 A 175 175 0 0 1 425 250" fill="none" />
+    <path id="textPathBottom" d="M 410 250 A 160 160 0 0 1 90 250" fill="none" />
+    <linearGradient id="shieldBorder" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="globeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Outer Navy Ring -->
+  <circle cx="250" cy="250" r="235" fill="#ffffff" stroke="#0a1931" stroke-width="18" />
+  <circle cx="250" cy="250" r="222" fill="#ffffff" stroke="#0a1931" stroke-width="3" />
+
+  <!-- Arched Text Top: COLÉGIO MILITAR -->
+  <text font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="34" fill="#0a1931" letter-spacing="4">
+    <textPath href="#textPathTop" startOffset="50%" text-anchor="middle">
+      COLÉGIO MILITAR
+    </textPath>
+  </text>
+
+  <!-- Arched Text Bottom: PMMA -->
+  <text font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="38" fill="#0a1931" letter-spacing="8">
+    <textPath href="#textPathBottom" startOffset="50%" text-anchor="middle">
+      PMMA
+    </textPath>
+  </text>
+
+  <!-- Laurel Wreath Left -->
+  <g fill="none" stroke="#1e3a8a" stroke-width="3.5" opacity="0.9">
+    <path d="M 115 320 C 85 240, 100 170, 150 115" stroke-linecap="round" />
+    <!-- Leaves left -->
+    <path d="M 125 300 C 105 290 100 270 115 260 C 125 275 130 290 125 300 Z" fill="#e0e7ff" />
+    <path d="M 110 260 C 90 250 88 230 105 220 C 115 235 120 250 110 260 Z" fill="#e0e7ff" />
+    <path d="M 102 220 C 82 210 82 190 100 180 C 110 195 115 210 102 220 Z" fill="#e0e7ff" />
+    <path d="M 103 180 C 85 170 88 150 108 140 C 118 155 120 170 103 180 Z" fill="#e0e7ff" />
+    <path d="M 115 145 C 100 135 105 115 128 110 C 135 125 135 140 115 145 Z" fill="#e0e7ff" />
+    <path d="M 135 120 C 120 110 130 95 150 95 C 155 110 150 120 135 120 Z" fill="#e0e7ff" />
+  </g>
+
+  <!-- Laurel Wreath Right -->
+  <g fill="none" stroke="#1e3a8a" stroke-width="3.5" opacity="0.9">
+    <path d="M 385 320 C 415 240, 400 170, 350 115" stroke-linecap="round" />
+    <!-- Leaves right -->
+    <path d="M 375 300 C 395 290 400 270 385 260 C 375 275 370 290 375 300 Z" fill="#e0e7ff" />
+    <path d="M 390 260 C 410 250 412 230 395 220 C 385 235 380 250 390 260 Z" fill="#e0e7ff" />
+    <path d="M 398 220 C 418 210 418 190 400 180 C 390 195 385 210 398 220 Z" fill="#e0e7ff" />
+    <path d="M 397 180 C 415 170 412 150 392 140 C 382 155 380 170 397 180 Z" fill="#e0e7ff" />
+    <path d="M 385 145 C 400 135 395 115 372 110 C 365 125 365 140 385 145 Z" fill="#e0e7ff" />
+    <path d="M 365 120 C 380 110 370 95 350 95 C 345 110 350 120 365 120 Z" fill="#e0e7ff" />
+  </g>
+
+  <!-- Crossed Sabers / Rods Behind Shield -->
+  <line x1="170" y1="365" x2="330" y2="205" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+  <line x1="330" y1="365" x2="170" y2="205" stroke="#1e293b" stroke-width="5" stroke-linecap="round" />
+
+  <!-- Central Shield -->
+  <g filter="url(#shadow)">
+    <!-- Shield Outline & Background -->
+    <path d="M 175 145 L 325 145 L 325 285 C 325 330, 250 360, 250 360 C 250 360, 175 330, 175 285 Z" 
+          fill="#ffffff" stroke="url(#shieldBorder)" stroke-width="9" stroke-linejoin="round" />
+    <path d="M 183 153 L 317 153 L 317 283 C 317 322, 250 348, 250 348 C 250 348, 183 322, 183 283 Z" 
+          fill="#ffffff" stroke="#1e293b" stroke-width="1.5" />
+  </g>
+
+  <!-- PMMA Mini Emblem on top of shield -->
+  <g transform="translate(250, 185)">
+    <circle cx="0" cy="0" r="23" fill="#ffffff" stroke="#1e3a8a" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="19" fill="#1e40af" />
+    <!-- Yellow star -->
+    <polygon points="0,-12 3.5,-3 12,-3 5,2 7.5,11 0,6 -7.5,11 -5,2 -12,-3 -3.5,-3" fill="#facc15" stroke="#ca8a04" stroke-width="0.8" />
+    <circle cx="0" cy="0" r="5" fill="#dc2626" />
+    <circle cx="0" cy="0" r="2.5" fill="#ffffff" />
+    <text x="0" y="-14" font-size="5" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">POLÍCIA MILITAR</text>
+    <text x="0" y="17" font-size="5" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">MARANHÃO</text>
+  </g>
+
+  <!-- Celestial Globe in Center -->
+  <g transform="translate(250, 260)">
+    <circle cx="0" cy="0" r="42" fill="url(#globeGrad)" stroke="#1e293b" stroke-width="2" />
+    <!-- Latitude / Longitude yellow lines -->
+    <ellipse cx="0" cy="0" rx="42" ry="18" fill="none" stroke="#fef08a" stroke-width="1.8" />
+    <ellipse cx="0" cy="0" rx="42" ry="32" fill="none" stroke="#fef08a" stroke-width="1.5" />
+    <line x1="0" y1="-42" x2="0" y2="42" stroke="#fef08a" stroke-width="1.8" />
+    <line x1="-42" y1="0" x2="42" y2="0" stroke="#fef08a" stroke-width="1.8" />
+    <ellipse cx="0" cy="0" rx="20" ry="42" fill="none" stroke="#fef08a" stroke-width="1.8" />
+
+    <!-- Side golden scroll/support brackets -->
+    <path d="M -42 12 C -52 5, -52 -15, -40 -12 C -40 2, -40 8, -42 12 Z" fill="url(#goldGrad)" stroke="#1e293b" stroke-width="1.5" />
+    <path d="M 42 12 C 52 5, 52 -15, 40 -12 C 40 2, 40 8, 42 12 Z" fill="url(#goldGrad)" stroke="#1e293b" stroke-width="1.5" />
+  </g>
+
+  <!-- Open Book & Quill Pen -->
+  <g transform="translate(250, 276)">
+    <!-- Book pages -->
+    <path d="M 0 5 C -20 -8, -40 -6, -42 8 L -42 18 C -22 8, -5 16, 0 16 C 5 16, 22 8, 42 18 L 42 8 C 40 -6, 20 -8, 0 5 Z" 
+          fill="#ffffff" stroke="#1e293b" stroke-width="2" />
+    <path d="M 0 5 L 0 16" stroke="#1e293b" stroke-width="1.5" />
+    <!-- Gold page rim -->
+    <path d="M -42 18 C -22 10, -5 18, 0 18 C 5 18, 22 10, 42 18" fill="none" stroke="#eab308" stroke-width="2.5" />
+    <!-- Horizontal Golden Quill Pen -->
+    <path d="M -36 5 C -15 2, 15 2, 36 5 C 28 8, 0 7, -36 5 Z" fill="url(#goldGrad)" stroke="#854d0e" stroke-width="1.2" />
+    <line x1="-38" y1="5" x2="38" y2="5" stroke="#713f12" stroke-width="1.5" />
+  </g>
+
+  <!-- Red Banner across bottom: COLÉGIO TIRADENTES -->
+  <g filter="url(#shadow)" transform="translate(250, 335)">
+    <!-- Left Ribbon Fold -->
+    <polygon points="-120,8 -100,-8 -100,16 -125,24 -115,8" fill="#991b1b" stroke="#7f1d1d" stroke-width="1.5" />
+    <!-- Right Ribbon Fold -->
+    <polygon points="120,8 100,-8 100,16 125,24 115,8" fill="#991b1b" stroke="#7f1d1d" stroke-width="1.5" />
+    
+    <!-- Central Red Banner -->
+    <path d="M -105 -12 L 105 -12 Q 112 3 105 18 L -105 18 Q -112 3 -105 -12 Z" 
+          fill="url(#shieldBorder)" stroke="#ffffff" stroke-width="2" />
+    
+    <text x="0" y="7" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="14.5" fill="#ffffff" text-anchor="middle" letter-spacing="1.2">
+      COLÉGIO TIRADENTES
+    </text>
+  </g>
+</svg>

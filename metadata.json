@@ -1,0 +1,6 @@
+{
+  "name": "CMT XVII - Plataforma Inteligente de Estudos",
+  "description": "Plataforma oficial de estudos preparatórios para ingresso no 6º e 7º ano do Colégio Militar Tiradentes XVII - Balsas/MA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
