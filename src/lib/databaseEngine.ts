@@ -18,315 +18,251 @@ import {
 } from '../types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { ACHIEVEMENTS_DATA } from '../data/achievementsData';
-import { OFFICIAL_QUESTIONS } from '../data/questionsData';
 
-// Estado em memória estruturado exatamente como as tabelas do PostgreSQL Supabase
+// Chaves de persistência no navegador (Netlify e AI Studio)
+const STORAGE_KEYS = {
+  PROFILES: 'cmt_db_profiles_v3',
+  ACCESS_REQUESTS: 'cmt_db_access_requests_v3',
+  STUDY_PREFERENCES: 'cmt_db_study_preferences_v3',
+  LESSON_PROGRESS: 'cmt_db_lesson_progress_v3',
+  QUESTION_ATTEMPTS: 'cmt_db_question_attempts_v3',
+  QUIZ_ATTEMPTS: 'cmt_db_quiz_attempts_v3',
+  USER_ACHIEVEMENTS: 'cmt_db_user_achievements_v3',
+  REWARD_LEDGER: 'cmt_db_reward_ledger_v3',
+  FRIENDSHIPS: 'cmt_db_friendships_v3',
+  MESSAGES: 'cmt_db_messages_v3',
+  NOTIFICATIONS: 'cmt_db_notifications_v3',
+  AUDIT_LOGS: 'cmt_db_audit_logs_v3',
+};
+
+// Conta Mestra Oficial do Superusuário (Diretoria Geral CMT XVII)
+export const ROOT_SUPERADMIN: UserProfile = {
+  id: 'super-admin-001',
+  username: 'diretoria_cmt',
+  full_name: 'Diretoria Geral CMT XVII',
+  email: 'diretoria@cmtxvii.com.br',
+  grade: '6_ano',
+  avatar_url: 'military_officer',
+  account_status: 'aprovada',
+  role: 'superusuario',
+  guardian_name: 'Diretoria de Ensino Regular PMMA',
+  guardian_phone: '(99) 99113-6329',
+  agreed_terms: true,
+  total_stars: 0,
+  total_points: 0,
+  study_streak_days: 0,
+  created_at: '2026-10-01T08:00:00Z',
+  updated_at: new Date().toISOString(),
+};
+
+function safeStorageGet<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeStorageSet<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Erro ao persistir ${key}:`, err);
+  }
+}
+
 class DatabaseEngine {
-  private profiles: UserProfile[] = [
-    {
-      id: 'super-admin-001',
-      username: 'diretoria_cmt',
-      full_name: 'Diretoria Geral CMT XVII',
-      email: 'diretoria@cmtxvii.com.br',
-      grade: '6_ano',
-      avatar_url: 'military_officer',
-      account_status: 'aprovada',
-      role: 'superusuario',
-      guardian_name: 'Diretoria de Ensino Regular PMMA',
-      guardian_phone: '(99) 99113-6329',
-      agreed_terms: true,
-      total_stars: 999,
-      total_points: 5000,
-      study_streak_days: 30,
-      created_at: new Date('2026-10-01T08:00:00Z').toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'student-demo-001',
-      username: 'cadete_marcos',
-      full_name: 'Marcos Vinícius Oliveira',
-      email: 'marcos.estudante@email.com',
-      grade: '6_ano',
-      avatar_url: 'cadet_blue',
-      account_status: 'aprovada',
-      role: 'estudante',
-      guardian_name: 'Sgt. Roberto Carlos Oliveira',
-      guardian_phone: '(99) 98844-1234',
-      guardian_cpf: '876.543.210-99',
-      agreed_terms: true,
-      total_stars: 45,
-      total_points: 380,
-      study_streak_days: 5,
-      created_at: new Date('2026-10-05T10:00:00Z').toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'student-demo-002',
-      username: 'anabeatriz_balsas',
-      full_name: 'Ana Beatriz Ferreira',
-      email: 'anabeatriz@email.com',
-      grade: '7_ano',
-      avatar_url: 'cadet_green',
-      account_status: 'aprovada',
-      role: 'estudante',
-      guardian_name: 'Maria Antônia Ferreira',
-      guardian_phone: '(99) 98123-4567',
-      guardian_cpf: '123.456.789-00',
-      agreed_terms: true,
-      total_stars: 70,
-      total_points: 620,
-      study_streak_days: 8,
-      created_at: new Date('2026-10-06T14:30:00Z').toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'student-pending-001',
-      username: 'gabriel_novato',
-      full_name: 'Gabriel Santos Lima',
-      email: 'gabriel@email.com',
-      grade: '6_ano',
-      avatar_url: 'cadet_yellow',
-      account_status: 'pendente',
-      role: 'estudante',
-      guardian_name: 'Francisca Santos Lima',
-      guardian_phone: '(99) 99201-9988',
-      guardian_cpf: '555.666.777-88',
-      agreed_terms: true,
-      total_stars: 0,
-      total_points: 0,
-      study_streak_days: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-
-  private accessRequests: AccessRequest[] = [
-    {
-      id: 'req-001',
-      user_id: 'student-pending-001',
-      username: 'gabriel_novato',
-      grade: '6_ano',
-      guardian_name: 'Francisca Santos Lima',
-      guardian_phone: '(99) 99201-9988',
-      requested_at: new Date().toISOString(),
-      status: 'pendente',
-    },
-  ];
-
-  private studyPreferences: Map<string, StudyPreferences> = new Map([
-    [
-      'student-demo-001',
-      {
-        id: 'pref-001',
-        user_id: 'student-demo-001',
-        daily_goal_minutes: 30,
-        days_per_week: 5,
-        priority_subject: 'ambas',
-        sound_effects_enabled: true,
-      },
-    ],
-    [
-      'student-demo-002',
-      {
-        id: 'pref-002',
-        user_id: 'student-demo-002',
-        daily_goal_minutes: 45,
-        days_per_week: 6,
-        priority_subject: 'matematica',
-        sound_effects_enabled: true,
-      },
-    ],
-  ]);
-
-  private lessonProgress: LessonProgress[] = [
-    {
-      id: 'prog-001',
-      user_id: 'student-demo-001',
-      lesson_id: 'les-6-port-tonicidade',
-      completed: true,
-      completed_at: new Date(Date.now() - 86400000).toISOString(),
-      time_spent_seconds: 900,
-      last_position_percent: 100,
-      last_accessed_at: new Date().toISOString(),
-    },
-    {
-      id: 'prog-002',
-      user_id: 'student-demo-001',
-      lesson_id: 'les-6-mat-posicional',
-      completed: false,
-      time_spent_seconds: 650,
-      last_position_percent: 60,
-      last_accessed_at: new Date().toISOString(),
-    },
-  ];
-
-  private questionAttempts: QuestionAttempt[] = [
-    {
-      id: 'att-001',
-      user_id: 'student-demo-001',
-      question_id: 'q-6-port-01',
-      selected_option: 'A',
-      is_correct: true,
-      explanation_viewed: true,
-      answered_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 'att-002',
-      user_id: 'student-demo-001',
-      question_id: 'q-6-mat-01',
-      selected_option: 'A',
-      is_correct: true,
-      explanation_viewed: true,
-      answered_at: new Date(Date.now() - 1800000).toISOString(),
-    },
-  ];
-
-  private quizAttempts: QuizAttempt[] = [
-    {
-      id: 'quiz-att-001',
-      user_id: 'student-demo-001',
-      quiz_id: 'simulado-oficial-6ano',
-      mode: 'simulado',
-      status: 'concluido',
-      started_at: new Date(Date.now() - 14400000).toISOString(),
-      finished_at: new Date(Date.now() - 7200000).toISOString(),
-      time_spent_seconds: 7200,
-      score_portuguese: 12,
-      score_math: 11,
-      total_score: 23,
-      total_questions: 30,
-      passed_rule_30percent: true,
-      answers_data: [],
-    },
-  ];
-
-  private userAchievements: UserAchievement[] = [
-    {
-      id: 'uach-001',
-      user_id: 'student-demo-001',
-      achievement_id: 'ach-primeira-aula',
-      unlocked_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'uach-002',
-      user_id: 'student-demo-001',
-      achievement_id: 'ach-primeiro-quiz',
-      unlocked_at: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ];
-
-  private rewardLedger: RewardLedgerEntry[] = [
-    {
-      id: 'rew-001',
-      user_id: 'student-demo-001',
-      stars: 10,
-      points: 50,
-      reason: 'Conclusão da primeira aula didática: Tonicidade',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'rew-002',
-      user_id: 'student-demo-001',
-      stars: 35,
-      points: 330,
-      reason: 'Conclusão do Simulado Oficial 6º Ano (23/30 acertos)',
-      created_at: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ];
-
-  private friendships: Friendship[] = [
-    {
-      id: 'fr-001',
-      user_id: 'student-demo-001',
-      friend_id: 'student-demo-002',
-      status: 'aceita',
-      created_at: new Date('2026-10-08T10:00:00Z').toISOString(),
-      updated_at: new Date('2026-10-08T10:30:00Z').toISOString(),
-    },
-  ];
-
-  private messages: ChatMessage[] = [
-    {
-      id: 'msg-001',
-      conversation_id: 'conv-001',
-      sender_id: 'student-demo-002',
-      sender_username: 'anabeatriz_balsas',
-      content: 'Olá Marcos! Você conseguiu resolver aquela questão de MMC dos semáforos?',
-      sent_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 'msg-002',
-      conversation_id: 'conv-001',
-      sender_id: 'student-demo-001',
-      sender_username: 'cadete_marcos',
-      content: 'Oi Ana! Consegui sim, fiz pela fatoração simultânea dividindo por números primos. Deu 36 segundos certinho!',
-      sent_at: new Date(Date.now() - 1800000).toISOString(),
-    },
-  ];
-
-  private notifications: AppNotification[] = [
-    {
-      id: 'notif-001',
-      user_id: 'student-demo-001',
-      title: 'Meta Diária Concluída!',
-      message: 'Excelente disciplina! Você atingiu sua meta de estudo com sucesso.',
-      type: 'meta',
-      is_read: false,
-      created_at: new Date(Date.now() - 7200000).toISOString(),
-    },
-    {
-      id: 'notif-002',
-      user_id: 'student-demo-001',
-      title: 'Aviso da Coordenação CMT XVII',
-      message: 'Lembre-se: no dia da prova traga caneta esferográfica de tinta preta transparente e documento com foto.',
-      type: 'aviso',
-      is_read: true,
-      created_at: new Date('2026-10-10T08:00:00Z').toISOString(),
-    },
-    {
-      id: 'notif-003',
-      user_id: 'super-admin-001',
-      title: 'Novo Cadastro Pendente',
-      message: 'O estudante Gabriel Santos Lima (gabriel_novato) aguarda aprovação de acesso.',
-      type: 'aviso',
-      is_read: false,
-      created_at: new Date().toISOString(),
-    },
-  ];
-
+  private profiles: UserProfile[] = [];
+  private accessRequests: AccessRequest[] = [];
+  private studyPreferences: Map<string, StudyPreferences> = new Map();
+  private lessonProgress: LessonProgress[] = [];
+  private questionAttempts: QuestionAttempt[] = [];
+  private quizAttempts: QuizAttempt[] = [];
+  private userAchievements: UserAchievement[] = [];
+  private rewardLedger: RewardLedgerEntry[] = [];
+  private friendships: Friendship[] = [];
+  private messages: ChatMessage[] = [];
+  private notifications: AppNotification[] = [];
   private messageReports: MessageReport[] = [];
+  private auditLogs: AuditLog[] = [];
 
-  private auditLogs: AuditLog[] = [
-    {
-      id: 'aud-001',
-      admin_id: 'super-admin-001',
-      admin_username: 'diretoria_cmt',
-      action: 'SISTEMA_INICIALIZADO',
-      target_entity: 'PLATAFORMA',
-      target_id: 'cmt-xvii-balsas',
-      details: { edital: 'Edital Nº 001/26 - CMT XVII', vagas: 120 },
-      created_at: new Date('2026-10-01T08:00:00Z').toISOString(),
-    },
-  ];
+  constructor() {
+    this.initDatabase();
+  }
+
+  private initDatabase() {
+    // Carrega dados reais persistidos localmente (sem alunos fictícios)
+    const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
+    
+    // Garante que o Superusuário sempre existe e filtra qualquer resquício de dados demo
+    const cleanProfiles = storedProfiles.filter(
+      (p) => !p.id.startsWith('student-demo') && p.username !== 'cadete_marcos' && p.username !== 'anabeatriz_balsas'
+    );
+
+    if (!cleanProfiles.some((p) => p.id === ROOT_SUPERADMIN.id)) {
+      cleanProfiles.unshift(ROOT_SUPERADMIN);
+    }
+    this.profiles = cleanProfiles;
+
+    this.accessRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
+      (r) => !r.id.startsWith('demo-') && r.username !== 'gabriel_novato'
+    );
+
+    this.lessonProgress = safeStorageGet<LessonProgress[]>(STORAGE_KEYS.LESSON_PROGRESS, []);
+    this.questionAttempts = safeStorageGet<QuestionAttempt[]>(STORAGE_KEYS.QUESTION_ATTEMPTS, []);
+    this.quizAttempts = safeStorageGet<QuizAttempt[]>(STORAGE_KEYS.QUIZ_ATTEMPTS, []);
+    this.userAchievements = safeStorageGet<UserAchievement[]>(STORAGE_KEYS.USER_ACHIEVEMENTS, []);
+    this.rewardLedger = safeStorageGet<RewardLedgerEntry[]>(STORAGE_KEYS.REWARD_LEDGER, []);
+    this.friendships = safeStorageGet<Friendship[]>(STORAGE_KEYS.FRIENDSHIPS, []);
+    this.messages = safeStorageGet<ChatMessage[]>(STORAGE_KEYS.MESSAGES, []);
+    this.notifications = safeStorageGet<AppNotification[]>(STORAGE_KEYS.NOTIFICATIONS, []);
+    this.auditLogs = safeStorageGet<AuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, [
+      {
+        id: 'aud-init',
+        admin_id: ROOT_SUPERADMIN.id,
+        admin_username: ROOT_SUPERADMIN.username,
+        action: 'SISTEMA_PRODUCAO_INICIADO',
+        target_entity: 'PLATAFORMA',
+        target_id: 'cmt-xvii-balsas',
+        details: { edital: 'Edital Nº 001/26 - CMT XVII', modo: 'producao_real' },
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    const rawPrefs = safeStorageGet<Record<string, StudyPreferences>>(STORAGE_KEYS.STUDY_PREFERENCES, {});
+    this.studyPreferences = new Map(Object.entries(rawPrefs));
+
+    // Salva o estado limpo inicial
+    this.persistAll();
+
+    // Sincroniza em segundo plano com o Supabase se as credenciais existirem
+    this.syncFromSupabase();
+  }
+
+  private persistAll() {
+    safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+    safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+    safeStorageSet(STORAGE_KEYS.LESSON_PROGRESS, this.lessonProgress);
+    safeStorageSet(STORAGE_KEYS.QUESTION_ATTEMPTS, this.questionAttempts);
+    safeStorageSet(STORAGE_KEYS.QUIZ_ATTEMPTS, this.quizAttempts);
+    safeStorageSet(STORAGE_KEYS.USER_ACHIEVEMENTS, this.userAchievements);
+    safeStorageSet(STORAGE_KEYS.REWARD_LEDGER, this.rewardLedger);
+    safeStorageSet(STORAGE_KEYS.FRIENDSHIPS, this.friendships);
+    safeStorageSet(STORAGE_KEYS.MESSAGES, this.messages);
+    safeStorageSet(STORAGE_KEYS.NOTIFICATIONS, this.notifications);
+    safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
+
+    const prefsObj: Record<string, StudyPreferences> = {};
+    this.studyPreferences.forEach((val, key) => {
+      prefsObj[key] = val;
+    });
+    safeStorageSet(STORAGE_KEYS.STUDY_PREFERENCES, prefsObj);
+  }
+
+  // Sincronização automática com Supabase se configurado em produção
+  private async syncFromSupabase() {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data: remoteProfiles } = await supabase.from('profiles').select('*');
+      if (remoteProfiles && remoteProfiles.length > 0) {
+        for (const rp of remoteProfiles) {
+          const idx = this.profiles.findIndex((p) => p.id === rp.id);
+          if (idx >= 0) {
+            this.profiles[idx] = { ...this.profiles[idx], ...rp };
+          } else {
+            this.profiles.push(rp);
+          }
+        }
+        safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+      }
+
+      const { data: remoteRequests } = await supabase.from('access_requests').select('*');
+      if (remoteRequests && remoteRequests.length > 0) {
+        this.accessRequests = remoteRequests;
+        safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+      }
+    } catch (e) {
+      console.warn('Sync from Supabase em segundo plano:', e);
+    }
+  }
 
   // -------------------------------------------------------------
-  // AUTENTICAÇÃO E PERFIS
+  // AUTENTICAÇÃO E PERFIS REAIS
   // -------------------------------------------------------------
   async getProfileByUsername(username: string): Promise<UserProfile | null> {
     const clean = username.trim().toLowerCase();
-    const found = this.profiles.find((p) => p.username.toLowerCase() === clean);
+    
+    // Tenta primeiro no cache local
+    let found = this.profiles.find(
+      (p) => p.username.toLowerCase() === clean || (p.email && p.email.toLowerCase() === clean)
+    );
+
+    // Se não encontrou e Supabase está conectado, busca no banco de dados na nuvem
+    if (!found && isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`username.ilike.${clean},email.ilike.${clean}`)
+          .maybeSingle();
+
+        if (data && !error) {
+          found = data as UserProfile;
+          if (!this.profiles.some((p) => p.id === found!.id)) {
+            this.profiles.push(found);
+            safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+          }
+        }
+      } catch (e) {
+        console.warn('Busca no Supabase falhou:', e);
+      }
+    }
+
     return found ? { ...found } : null;
   }
 
   async getProfileById(userId: string): Promise<UserProfile | null> {
-    const found = this.profiles.find((p) => p.id === userId);
+    let found = this.profiles.find((p) => p.id === userId);
+
+    if (!found && isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        if (data) {
+          found = data as UserProfile;
+          this.profiles.push(found);
+          safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+        }
+      } catch (e) {
+        console.warn('Busca de perfil por ID no Supabase:', e);
+      }
+    }
+
     return found ? { ...found } : null;
   }
 
   async getAllProfiles(): Promise<UserProfile[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase.from('profiles').select('*');
+        if (data && data.length > 0) {
+          this.profiles = data as UserProfile[];
+          if (!this.profiles.some((p) => p.id === ROOT_SUPERADMIN.id)) {
+            this.profiles.unshift(ROOT_SUPERADMIN);
+          }
+          safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+        }
+      } catch (e) {
+        console.warn('Erro ao listar perfis do Supabase:', e);
+      }
+    }
     return [...this.profiles];
   }
 
+  // -------------------------------------------------------------
+  // CADASTRO DE ESTUDANTE: REGRA DO EDITAL (STATUS OBRIGATORIAMENTE PENDENTE)
+  // -------------------------------------------------------------
   async registerStudent(data: {
     username: string;
     fullName: string;
@@ -350,7 +286,7 @@ class DatabaseEngine {
       email: data.email || `${data.username.toLowerCase()}@estudante.cmt.br`,
       grade: data.grade,
       avatar_url: data.avatarUrl || 'cadet_blue',
-      account_status: 'pendente', // REGRA DE OURO: OBRIGATORIAMENTE PENDENTE
+      account_status: 'pendente', // REGRA: OBRIGATORIAMENTE PENDENTE DE LIBERAÇÃO
       role: 'estudante',
       guardian_name: data.guardianName,
       guardian_phone: data.guardianPhone,
@@ -377,24 +313,28 @@ class DatabaseEngine {
     this.profiles.push(newProfile);
     this.accessRequests.push(newRequest);
 
-    // Notificar administração
+    // Notificação para o Superusuário
     this.notifications.push({
       id: `notif-${Date.now()}`,
-      user_id: 'super-admin-001',
+      user_id: ROOT_SUPERADMIN.id,
       title: 'Nova Solicitação de Matrícula',
-      message: `Estudante ${newProfile.full_name} (@${newProfile.username}) para o ${newProfile.grade === '6_ano' ? '6º Ano' : '7º Ano'} aguarda aprovação.`,
+      message: `Estudante ${newProfile.full_name} (@${newProfile.username}) para o ${
+        newProfile.grade === '6_ano' ? '6º Ano' : '7º Ano'
+      } aguarda liberação de acesso.`,
       type: 'aviso',
       is_read: false,
       created_at: new Date().toISOString(),
     });
 
-    // Se Supabase estiver conectado, grava também lá
+    this.persistAll();
+
+    // Sincroniza com Supabase se configurado
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('profiles').insert([newProfile]);
         await supabase.from('access_requests').insert([newRequest]);
       } catch (e) {
-        console.warn('Sync to Supabase:', e);
+        console.warn('Erro ao inserir no Supabase:', e);
       }
     }
 
@@ -402,7 +342,7 @@ class DatabaseEngine {
   }
 
   // -------------------------------------------------------------
-  // ADMINISTRAÇÃO E APROVAÇÃO DE ACESSO
+  // ADMINISTRAÇÃO: LIBERAÇÃO / APROVAÇÃO EXCLUSIVA DO SUPERUSUÁRIO
   // -------------------------------------------------------------
   async updateAccountStatus(
     adminId: string,
@@ -412,19 +352,19 @@ class DatabaseEngine {
   ): Promise<UserProfile> {
     const admin = await this.getProfileById(adminId);
     if (!admin || admin.role !== 'superusuario') {
-      throw new Error('Acesso negado: Somente o superusuário possui permissão para alterar estados de conta.');
+      throw new Error('Acesso negado: Somente o Superusuário possui permissão para liberar ou alterar contas.');
     }
 
     const targetIndex = this.profiles.findIndex((p) => p.id === targetUserId);
     if (targetIndex === -1) {
-      throw new Error('Estudante não encontrado.');
+      throw new Error('Estudante não encontrado no banco de dados.');
     }
 
     const previousStatus = this.profiles[targetIndex].account_status;
     this.profiles[targetIndex].account_status = newStatus;
     this.profiles[targetIndex].updated_at = new Date().toISOString();
 
-    // Atualiza solicitação se houver
+    // Atualiza solicitação de acesso correspondente
     const req = this.accessRequests.find((r) => r.user_id === targetUserId);
     if (req) {
       req.status = newStatus === 'aprovada' ? 'aprovado' : 'recusado';
@@ -433,7 +373,7 @@ class DatabaseEngine {
       req.rejection_reason = reason;
     }
 
-    // Registra log de auditoria
+    // Registra log de auditoria oficial
     this.auditLogs.unshift({
       id: `aud-${Date.now()}`,
       admin_id: adminId,
@@ -445,28 +385,65 @@ class DatabaseEngine {
         username: this.profiles[targetIndex].username,
         de: previousStatus,
         para: newStatus,
-        motivo: reason || 'Ação administrativa',
+        motivo: reason || 'Liberação pelo Superusuário',
       },
       created_at: new Date().toISOString(),
     });
 
-    // Notificação para o estudante se aprovado
+    // Notificação enviada para o estudante
     if (newStatus === 'aprovada') {
       this.notifications.push({
         id: `notif-${Date.now()}`,
         user_id: targetUserId,
-        title: 'Acesso Aprovado!',
-        message: 'Parabéns! Sua matrícula e acesso à Plataforma CMT XVII foram aprovados pela Diretoria.',
+        title: 'Acesso Liberado!',
+        message: 'Parabéns! Sua matrícula foi liberada pela Diretoria Geral. Você já pode estudar todo o conteúdo.',
         type: 'aprovacao',
         is_read: false,
         created_at: new Date().toISOString(),
       });
     }
 
+    this.persistAll();
+
+    // Sincroniza atualização no Supabase se configurado
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', targetUserId);
+
+        if (req) {
+          await supabase
+            .from('access_requests')
+            .update({
+              status: req.status,
+              reviewed_at: req.reviewed_at,
+              reviewed_by: adminId,
+              rejection_reason: reason,
+            })
+            .eq('user_id', targetUserId);
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar status no Supabase:', e);
+      }
+    }
+
     return { ...this.profiles[targetIndex] };
   }
 
   async getAccessRequests(): Promise<AccessRequest[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase.from('access_requests').select('*');
+        if (data && data.length > 0) {
+          this.accessRequests = data as AccessRequest[];
+          safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar solicitações do Supabase:', e);
+      }
+    }
     return [...this.accessRequests];
   }
 
@@ -490,6 +467,7 @@ class DatabaseEngine {
       sound_effects_enabled: true,
     };
     this.studyPreferences.set(userId, def);
+    this.persistAll();
     return def;
   }
 
@@ -497,11 +475,12 @@ class DatabaseEngine {
     const current = await this.getStudyPreferences(userId);
     const updated = { ...current, ...data };
     this.studyPreferences.set(userId, updated);
+    this.persistAll();
     return updated;
   }
 
   // -------------------------------------------------------------
-  // PROGRESSO DAS AULAS E SALVAMENTO
+  // PROGRESSO DAS AULAS
   // -------------------------------------------------------------
   async getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | null> {
     const prog = this.lessonProgress.find((p) => p.user_id === userId && p.lesson_id === lessonId);
@@ -545,8 +524,18 @@ class DatabaseEngine {
     let starsEarned = 0;
     if (isFirstTime) {
       starsEarned = 10;
-      await this.awardStars(userId, starsEarned, 50, `Conclusão com louvor da aula: ${lessonId}`);
+      await this.awardStars(userId, starsEarned, 50, `Conclusão da aula: ${lessonId}`);
       await this.checkAndAwardAchievements(userId, 'ach-primeira-aula');
+    }
+
+    this.persistAll();
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('lesson_progress').upsert([prog]);
+      } catch (e) {
+        console.warn('Erro ao sincronizar progresso com Supabase:', e);
+      }
     }
 
     return { progress: { ...prog }, starsEarned };
@@ -575,9 +564,9 @@ class DatabaseEngine {
       prog.time_spent_seconds += timeSpentDelta;
       prog.last_accessed_at = new Date().toISOString();
     }
+    this.persistAll();
   }
 
-  // Obter última aula para o botão "Continuar estudando"
   async getLastStudiedLesson(userId: string): Promise<LessonProgress | null> {
     const list = this.lessonProgress
       .filter((p) => p.user_id === userId)
@@ -586,7 +575,7 @@ class DatabaseEngine {
   }
 
   // -------------------------------------------------------------
-  // BANCO DE QUESTÕES E TENTATIVAS
+  // BANCO DE QUESTÕES E TENTATIVAS REAIS
   // -------------------------------------------------------------
   async recordQuestionAttempt(
     userId: string,
@@ -609,13 +598,13 @@ class DatabaseEngine {
       await this.awardStars(userId, 2, 10, 'Acerto de questão de fixação');
     }
 
-    // Verificar histórico de acertos
     const userAttempts = this.questionAttempts.filter((a) => a.user_id === userId);
     const correctCount = userAttempts.filter((a) => a.is_correct).length;
     if (correctCount >= 5) {
       await this.checkAndAwardAchievements(userId, 'ach-5-acertos');
     }
 
+    this.persistAll();
     return attempt;
   }
 
@@ -637,7 +626,7 @@ class DatabaseEngine {
     timeSpentSeconds: number
   ): Promise<QuizAttempt> {
     const totalScore = scorePortuguese + scoreMath;
-    const gradePortugueseRequired = quizId.includes('6ano') ? 5 : 6; // ~30% do total da disciplina
+    const gradePortugueseRequired = quizId.includes('6ano') ? 5 : 6;
     const gradeMathRequired = quizId.includes('6ano') ? 5 : 6;
     const passed30Percent = scorePortuguese >= gradePortugueseRequired && scoreMath >= gradeMathRequired;
 
@@ -660,12 +649,21 @@ class DatabaseEngine {
 
     this.quizAttempts.unshift(attempt);
 
-    // Recompensas
     const starsReward = 20 + Math.floor((totalScore / totalQuestions) * 30);
     await this.awardStars(userId, starsReward, totalScore * 10, `Simulado concluído (${totalScore}/${totalQuestions} acertos)`);
     await this.checkAndAwardAchievements(userId, 'ach-simulado-cmt');
     if (passed30Percent) {
       await this.checkAndAwardAchievements(userId, 'ach-regra-corte');
+    }
+
+    this.persistAll();
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('quiz_attempts').insert([attempt]);
+      } catch (e) {
+        console.warn('Erro ao inserir simulado no Supabase:', e);
+      }
     }
 
     return attempt;
@@ -693,6 +691,8 @@ class DatabaseEngine {
       reason,
       created_at: new Date().toISOString(),
     });
+
+    this.persistAll();
   }
 
   async checkAndAwardAchievements(userId: string, achievementId: string): Promise<void> {
@@ -709,7 +709,7 @@ class DatabaseEngine {
       unlocked_at: new Date().toISOString(),
     });
 
-    await this.awardStars(userId, meta.stars_reward, meta.points_reward, `Conquista desbloqueada: ${meta.title}`);
+    await this.awardStars(userId, meta.stars_reward, meta.points_reward, `Conquista: ${meta.title}`);
 
     this.notifications.push({
       id: `notif-${Date.now()}`,
@@ -720,6 +720,8 @@ class DatabaseEngine {
       is_read: false,
       created_at: new Date().toISOString(),
     });
+
+    this.persistAll();
   }
 
   async getUserAchievements(userId: string): Promise<UserAchievement[]> {
@@ -731,7 +733,7 @@ class DatabaseEngine {
   }
 
   // -------------------------------------------------------------
-  // COMUNIDADE SEGURA: AMIZADES E CHAT
+  // AMIZADES E MENSAGENS REAIS
   // -------------------------------------------------------------
   async getFriends(userId: string): Promise<UserProfile[]> {
     const friendRelations = this.friendships.filter(
@@ -787,6 +789,7 @@ class DatabaseEngine {
       created_at: new Date().toISOString(),
     });
 
+    this.persistAll();
     return rel;
   }
 
@@ -812,10 +815,11 @@ class DatabaseEngine {
         created_at: new Date().toISOString(),
       });
     }
+
+    this.persistAll();
   }
 
   async getMessages(userA: string, userB: string): Promise<ChatMessage[]> {
-    // Apenas amigos podem trocar mensagens
     const areFriends = this.friendships.some(
       (f) =>
         ((f.user_id === userA && f.friend_id === userB) || (f.user_id === userB && f.friend_id === userA)) &&
@@ -827,8 +831,7 @@ class DatabaseEngine {
       .filter(
         (m) =>
           (m.sender_id === userA && m.conversation_id.includes(userB)) ||
-          (m.sender_id === userB && m.conversation_id.includes(userA)) ||
-          m.conversation_id === 'conv-001'
+          (m.sender_id === userB && m.conversation_id.includes(userA))
       )
       .sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
   }
@@ -840,7 +843,7 @@ class DatabaseEngine {
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      conversation_id: 'conv-001',
+      conversation_id: `conv-${[senderId, recipientId].sort().join('-')}`,
       sender_id: senderId,
       sender_username: sender.username,
       sender_avatar: sender.avatar_url,
@@ -848,6 +851,7 @@ class DatabaseEngine {
       sent_at: new Date().toISOString(),
     };
     this.messages.push(newMsg);
+    this.persistAll();
     return newMsg;
   }
 
@@ -864,13 +868,15 @@ class DatabaseEngine {
 
     this.notifications.push({
       id: `notif-${Date.now()}`,
-      user_id: 'super-admin-001',
+      user_id: ROOT_SUPERADMIN.id,
       title: 'Nova Denúncia Recebida',
       message: `Uma mensagem ou usuário foi denunciado por: "${reason}". Verifique no Painel de Moderação.`,
       type: 'aviso',
       is_read: false,
       created_at: new Date().toISOString(),
     });
+
+    this.persistAll();
   }
 
   async getReports(): Promise<MessageReport[]> {
@@ -888,7 +894,10 @@ class DatabaseEngine {
 
   async markNotificationAsRead(userId: string, notificationId: string): Promise<void> {
     const notif = this.notifications.find((n) => n.id === notificationId && n.user_id === userId);
-    if (notif) notif.is_read = true;
+    if (notif) {
+      notif.is_read = true;
+      this.persistAll();
+    }
   }
 }
 

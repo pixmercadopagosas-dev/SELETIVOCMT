@@ -107,7 +107,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   required
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
-                  placeholder="Ex: cadete_marcos"
+                  placeholder="Ex: usuario_estudante ou e-mail"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
                 />
               </div>
@@ -144,48 +144,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               Acessar Plataforma
             </button>
 
-            {/* Quick Demo Access Switcher */}
+            {/* Superusuário Direct Access */}
             <div className="pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">
-                Acesso Rápido para Avaliação
-              </span>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('cadete_marcos')}
-                  className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-950 font-bold text-left border border-blue-200/60"
-                >
-                  <p className="leading-tight">6º Ano Aprovado</p>
-                  <span className="text-[10px] text-blue-700 font-normal">@cadete_marcos</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('anabeatriz_balsas')}
-                  className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 font-bold text-left border border-emerald-200/60"
-                >
-                  <p className="leading-tight">7º Ano Aprovado</p>
-                  <span className="text-[10px] text-emerald-700 font-normal">@anabeatriz_balsas</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('gabriel_novato')}
-                  className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold text-left border border-amber-200/60"
-                >
-                  <p className="leading-tight">Conta Pendente</p>
-                  <span className="text-[10px] text-amber-700 font-normal">@gabriel_novato</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('diretoria_cmt')}
-                  className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-950 font-bold text-left border border-red-200/60"
-                >
-                  <p className="leading-tight">Superusuário Geral</p>
-                  <span className="text-[10px] text-red-700 font-normal">@diretoria_cmt</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('diretoria_cmt')}
+                className="w-full p-3 rounded-2xl bg-red-50 hover:bg-red-100 text-red-950 font-bold text-left border border-red-200 flex items-center justify-between transition-colors shadow-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-red-700 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                    🛡️
+                  </div>
+                  <div>
+                    <p className="text-xs font-black leading-tight text-red-950">Acesso da Diretoria (Superusuário)</p>
+                    <span className="text-[10px] text-red-700 font-semibold">@diretoria_cmt • Liberar e homologar matrículas</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-1 bg-red-200 text-red-900 rounded-lg">
+                  Entrar
+                </span>
+              </button>
             </div>
 
             <div className="pt-2 text-center">
@@ -217,7 +195,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Ex: cadete_marcos ou responsavel@email.com"
+                placeholder="Ex: usuario_estudante ou responsavel@email.com"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
               />
             </div>

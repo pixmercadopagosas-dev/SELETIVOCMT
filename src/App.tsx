@@ -32,6 +32,7 @@ import {
   BookOpen,
   Calculator,
   ShieldAlert,
+  Shield,
   ArrowRight,
   Sparkles,
   Calendar,
@@ -70,17 +71,46 @@ function MainApp() {
 
   const { cartoonConfig } = useAppTheme();
 
-  // Auto-load demo initial student for instant UX
+  // Check stored active session on mount
   useEffect(() => {
-    initUser('student-demo-001');
+    const savedUserId = localStorage.getItem('cmt_current_user_id');
+    // Se era ID fictício antigo, descarta
+    if (savedUserId && savedUserId !== 'student-demo-001' && savedUserId !== 'student-demo-002') {
+      initUser(savedUserId);
+    } else {
+      localStorage.removeItem('cmt_current_user_id');
+      setCurrentUser(null);
+    }
   }, []);
 
   const initUser = async (userId: string) => {
     const user = await db.getProfileById(userId);
     if (user) {
       setCurrentUser(user);
+      localStorage.setItem('cmt_current_user_id', user.id);
       loadUserData(user.id);
+    } else {
+      localStorage.removeItem('cmt_current_user_id');
+      setCurrentUser(null);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('cmt_current_user_id');
+    setCurrentUser(null);
+    setActiveLessonId(null);
+    setCurrentTab('inicio');
+  };
+
+  const handleLoginSuccess = async (user: UserProfile) => {
+    localStorage.setItem('cmt_current_user_id', user.id);
+    setCurrentUser(user);
+    await loadUserData(user.id);
+  };
+
+  const handleRegisterSuccess = (user: UserProfile) => {
+    localStorage.setItem('cmt_current_user_id', user.id);
+    setCurrentUser(user);
   };
 
   const loadUserData = async (userId: string) => {
@@ -131,13 +161,16 @@ function MainApp() {
           onOpenSupabaseStatus={() => {}}
           onOpenProfile={() => {}}
           onOpenThemeModal={() => setThemeModalOpen(true)}
-          onLogout={() => setCurrentUser(null)}
+          onLogout={handleLogout}
           onSwitchUser={handleSwitchUser}
         />
         <PendingApprovalView
           currentUser={currentUser}
-          onStatusUpdated={(updated) => setCurrentUser(updated)}
-          onLogout={() => setCurrentUser(null)}
+          onStatusUpdated={(updated) => {
+            setCurrentUser(updated);
+            loadUserData(updated.id);
+          }}
+          onLogout={handleLogout}
         />
         <ThemeSelectorModal
           isOpen={themeModalOpen}
@@ -157,7 +190,7 @@ function MainApp() {
           onOpenSupabaseStatus={() => {}}
           onOpenProfile={() => {}}
           onOpenThemeModal={() => setThemeModalOpen(true)}
-          onLogout={() => setCurrentUser(null)}
+          onLogout={handleLogout}
           onSwitchUser={handleSwitchUser}
         />
         <div className="min-h-[80vh] flex items-center justify-center p-4">
@@ -170,7 +203,7 @@ function MainApp() {
               Sua conta foi suspensa pela coordenação. Entre em contato com a secretaria do Colégio Militar Tiradentes XVII pelo telefone (99) 99113-6329.
             </p>
             <button
-              onClick={() => setCurrentUser(null)}
+              onClick={handleLogout}
               className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
             >
               Encerrar Sessão
@@ -197,6 +230,14 @@ function MainApp() {
                 className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold rounded-xl border border-purple-200"
               >
                 🎨 Cores & Temas
+              </button>
+              <button
+                onClick={() => handleSwitchUser('super-admin-001')}
+                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-950 text-xs font-black rounded-xl border border-red-300 flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Acesso exclusivo da Diretoria Geral para aprovação e liberação de alunos"
+              >
+                <Shield className="w-3.5 h-3.5 text-red-700" />
+                <span>Superusuário</span>
               </button>
               <button
                 onClick={() => setLoginModalOpen(true)}
@@ -235,7 +276,7 @@ function MainApp() {
                 onClick={() => setLoginModalOpen(true)}
                 className="px-6 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-extrabold text-sm shadow-md transition-all inline-flex items-center gap-2"
               >
-                <span>Acessar Área do Estudante</span>
+                <span>Acessar com Login e Senha</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
@@ -243,6 +284,13 @@ function MainApp() {
                 className="px-6 py-3 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-xl font-bold text-sm transition-colors"
               >
                 Cadastrar Novo Estudante
+              </button>
+              <button
+                onClick={() => handleSwitchUser('super-admin-001')}
+                className="px-5 py-3 bg-red-100 hover:bg-red-200 border border-red-300 text-red-950 rounded-xl font-black text-sm transition-colors inline-flex items-center gap-2 shadow-xs"
+              >
+                <Shield className="w-4 h-4 text-red-700" />
+                <span>Painel Superusuário (Liberar Alunos)</span>
               </button>
             </div>
           </div>
@@ -284,19 +332,14 @@ function MainApp() {
         <LoginModal
           isOpen={loginModalOpen}
           onClose={() => setLoginModalOpen(false)}
-          onLoginSuccess={(u) => {
-            setCurrentUser(u);
-            loadUserData(u.id);
-          }}
+          onLoginSuccess={handleLoginSuccess}
           onOpenRegister={() => setRegisterModalOpen(true)}
         />
 
         <RegisterModal
           isOpen={registerModalOpen}
           onClose={() => setRegisterModalOpen(false)}
-          onRegisterSuccess={(u) => {
-            setCurrentUser(u);
-          }}
+          onRegisterSuccess={handleRegisterSuccess}
           onOpenLogin={() => setLoginModalOpen(true)}
         />
 
@@ -322,7 +365,7 @@ function MainApp() {
         onOpenSupabaseStatus={() => setCurrentTab('teste-banco')}
         onOpenProfile={() => setCurrentTab('perfil')}
         onOpenThemeModal={() => setThemeModalOpen(true)}
-        onLogout={() => setCurrentUser(null)}
+        onLogout={handleLogout}
         onSwitchUser={handleSwitchUser}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
       />

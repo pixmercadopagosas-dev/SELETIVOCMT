@@ -134,7 +134,7 @@ export const COLOR_PRESETS: Record<SystemColor, { label: string; previewHex: str
   // Fogo Fátuo
   vermelho_escuro: {
     label: 'Vermelho Escuro (Fogo Fátuo)',
-    previewHex: '#881337',
+    previewHex: '#991b1b',
     config: {
       primaryBg: 'bg-rose-900',
       primaryHover: 'hover:bg-rose-950',
@@ -145,7 +145,7 @@ export const COLOR_PRESETS: Record<SystemColor, { label: string; previewHex: str
       badgeText: 'text-rose-950',
       glowColor: 'shadow-rose-900/30',
       ringColor: 'ring-rose-500',
-      hex: '#881337',
+      hex: '#991b1b',
     },
   },
   // Eco Eco
@@ -458,6 +458,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleSetColor = (color: SystemColor) => {
     setCurrentColor(color);
     localStorage.setItem('cmt_theme_color', color);
+
+    // Se estiver no tema Ben 10, sincroniza imediatamente o alien ativo com a cor
+    if (currentCartoon === 'ben10_alien') {
+      const matchingAlien = BEN10_ALIENS.find((a) => a.systemColorKey === color);
+      if (matchingAlien) {
+        setSelectedAlienIdState(matchingAlien.id);
+        localStorage.setItem('cmt_theme_alien', matchingAlien.id);
+      }
+    }
   };
 
   const handleSetCartoon = (cartoon: CartoonTheme) => {

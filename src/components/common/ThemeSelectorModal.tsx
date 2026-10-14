@@ -6,6 +6,7 @@ import {
   SystemColor,
   CartoonTheme,
 } from '../../lib/themeContext';
+import { BEN10_ALIENS } from '../../data/themeCharacters';
 import { Palette, Sparkles, Check, X, Wand2, Gamepad2, Heart, Zap } from 'lucide-react';
 import { renderThemeIcon, OmnitrixDialIcon } from './AlienSvgIcons';
 
@@ -22,6 +23,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({ isOpen, 
     activeTeenProfile,
     setColor,
     setCartoon,
+    transformOmnitrix,
   } = useAppTheme();
 
   if (!isOpen) return null;
@@ -46,30 +48,31 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({ isOpen, 
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 rounded-2xl shadow-md">
-            <Palette className="w-7 h-7" />
+        {/* Modal Header */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-blue-900 font-black text-sm">
+            <Palette className="w-5 h-5 text-blue-600" />
+            <span>Personalização Visual CMT XVII</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            Personalize as Cores e Temas do Sistema
+            Escolha o Seu Tema & Cores do Sistema
           </h2>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Escolha temas reais inspirados em Ben 10, universos adolescentes e jogos para deixar seus estudos mais divertidos e imersivos!
+          <p className="text-xs text-slate-500">
+            Personalize a aparência do portal com temas de aventura, modo gamer adolescente ou a estética oficial do colégio.
           </p>
         </div>
 
         {/* ========================================================= */}
-        {/* SEÇÃO 1: TEMAS ADOLESCENTES (NOVIDADE) */}
+        {/* SEÇÃO 1: NOVOS TEMAS ADOLESCENTES (PARA MENINOS E MENINAS) */}
         {/* ========================================================= */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <Gamepad2 className="w-4 h-4 text-cyan-600" />
-              Temas Adolescentes (Novo!)
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              Temas Adolescentes (Meninos & Meninas)
             </h3>
-            <span className="text-[10px] font-extrabold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
-              Para Meninos & Meninas
+            <span className="text-[10px] font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+              Recomendado
             </span>
           </div>
 
@@ -164,110 +167,142 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({ isOpen, 
         </div>
 
         {/* ========================================================= */}
-        {/* SEÇÃO 2: TEMAS INFANTIS, BEN 10 & JOGOS */}
+        {/* SEÇÃO 2: BEN 10 COM OS 8 ALIENS & CORES DINÂMICAS */}
         {/* ========================================================= */}
         <div className="space-y-3 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <Wand2 className="w-4 h-4 text-emerald-600" />
-              Temas Infantis & Desenhos (Com Ben 10 Real)
+              <OmnitrixDialIcon className="w-4 h-4" />
+              Ben 10 & Força Alienígena (8 Aliens com Cores Reais)
             </h3>
-            <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-              Aliens & Mascotes
+            <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+              Cores Automáticas
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {cartoonThemes.map((themeKey) => {
-              const theme = CARTOON_THEMES[themeKey];
-              const isSelected = currentCartoon === themeKey;
-              const isBen10 = themeKey === 'ben10_alien';
-
-              return (
-                <button
-                  key={themeKey}
-                  onClick={() => setCartoon(themeKey)}
-                  className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all group ${
-                    isSelected
-                      ? isBen10
-                        ? 'border-emerald-500 bg-slate-950 text-white ring-2 ring-emerald-400 shadow-md shadow-emerald-500/20'
-                        : 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-600 shadow-xs'
-                      : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
-                  }`}
+          {/* Banner explicativo de cores */}
+          <div className="p-3 bg-slate-900 rounded-2xl border border-emerald-500/40 text-white space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5" />
+                Clique em um alien para virar herói e trocar a cor do sistema:
+              </span>
+              {currentCartoon === 'ben10_alien' && (
+                <span
+                  className="text-[10px] font-black px-2 py-0.5 rounded-md"
+                  style={{ backgroundColor: activeAlienProfile.powerColor, color: '#fff' }}
                 >
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                      isSelected && isBen10
-                        ? 'bg-emerald-950 border-emerald-400'
-                        : 'bg-slate-100 border-slate-200 group-hover:scale-105'
-                    } transition-transform`}
+                  {activeAlienProfile.name} • {activeAlienProfile.colorLabel}
+                </span>
+              )}
+            </div>
+
+            {/* Grid dos 8 Aliens com as cores solicitadas */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {BEN10_ALIENS.map((alien) => {
+                const isCurrent =
+                  currentCartoon === 'ben10_alien' && activeAlienProfile.id === alien.id;
+
+                return (
+                  <button
+                    key={alien.id}
+                    onClick={() => {
+                      setCartoon('ben10_alien');
+                      transformOmnitrix(alien.id);
+                      setColor(alien.systemColorKey as SystemColor);
+                    }}
+                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all relative overflow-hidden group ${
+                      isCurrent
+                        ? 'border-white bg-slate-800/90 ring-2 shadow-lg'
+                        : 'border-slate-800 bg-slate-950/70 hover:bg-slate-800 hover:border-slate-700'
+                    }`}
+                    style={isCurrent ? { borderColor: alien.powerColor, boxShadow: `0 0 15px ${alien.powerColor}60` } : {}}
+                    title={`${alien.name} - Cor do Sistema: ${alien.colorLabel}`}
                   >
-                    {isBen10 ? (
-                      <OmnitrixDialIcon className="w-7 h-7" glow={isSelected} />
-                    ) : (
-                      <span className="text-2xl select-none">{theme.iconEmoji}</span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p
-                        className={`text-xs font-black truncate ${
-                          isSelected && isBen10 ? 'text-white' : 'text-slate-900'
-                        }`}
-                      >
-                        {theme.name}
-                      </p>
-                      {isSelected && (
-                        <Check
-                          className={`w-4 h-4 shrink-0 ${
-                            isBen10 ? 'text-emerald-400' : 'text-purple-700'
-                          }`}
-                        />
-                      )}
+                    <div
+                      className="w-8 h-8 rounded-lg bg-slate-900 border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                      style={{ borderColor: alien.powerColor }}
+                    >
+                      {renderThemeIcon(alien.iconName, 'w-6 h-6')}
                     </div>
-
-                    {isBen10 && isSelected && (
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[10px] text-emerald-300 font-extrabold">
-                          Alien ativo: {activeAlienProfile.name}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black truncate text-white block">
+                          {alien.name}
                         </span>
+                        {isCurrent && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
                       </div>
-                    )}
+                      <span
+                        className="text-[9px] font-extrabold uppercase px-1 rounded inline-block"
+                        style={{
+                          backgroundColor: `${alien.powerColor}30`,
+                          color: alien.powerColor,
+                          border: `1px solid ${alien.powerColor}60`,
+                        }}
+                      >
+                        {alien.colorLabel}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                    <p
-                      className={`text-[11px] line-clamp-1 mt-0.5 ${
-                        isSelected && isBen10 ? 'text-slate-300' : 'text-slate-500'
+          {/* Outros Temas Infantis e Oficiais */}
+          <div className="pt-2">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">
+              Outros Temas do Portal CMT XVII
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {cartoonThemes
+                .filter((t) => t !== 'ben10_alien')
+                .map((themeKey) => {
+                  const theme = CARTOON_THEMES[themeKey];
+                  const isSelected = currentCartoon === themeKey;
+
+                  return (
+                    <button
+                      key={themeKey}
+                      onClick={() => setCartoon(themeKey)}
+                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
+                        isSelected
+                          ? 'border-blue-700 bg-blue-50/70 ring-1 ring-blue-600 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
-                      {theme.description}
-                    </p>
-
-                    <span
-                      className={`text-[10px] font-bold mt-1 block italic ${
-                        isSelected && isBen10 ? 'text-emerald-300' : 'text-purple-800'
-                      }`}
-                    >
-                      "{theme.motto}"
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+                      <span className="text-xl select-none shrink-0">{theme.iconEmoji}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-900 truncate">
+                            {theme.name}
+                          </p>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-700 shrink-0" />}
+                        </div>
+                        <p className="text-[10px] text-slate-500 truncate">{theme.targetAudience}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         </div>
 
         {/* ========================================================= */}
-        {/* SEÇÃO 3: COR PRINCIPAL DO SISTEMA */}
+        {/* SEÇÃO 3: PALETA DE CORES PRINCIPAL DO SISTEMA */}
         {/* ========================================================= */}
         <div className="space-y-3 pt-3 border-t border-slate-100">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-yellow-500" />
-            Cor Principal do Sistema
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-yellow-500" />
+              Cor Principal do Sistema (Sincronizada com Aliens)
+            </h3>
+            <span className="text-[10px] text-slate-400 font-medium">
+              Escolha manual de cor
+            </span>
+          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {(Object.keys(COLOR_PRESETS) as SystemColor[]).map((colorKey) => {
               const preset = COLOR_PRESETS[colorKey];
               const isSelected = currentColor === colorKey;
@@ -276,20 +311,20 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({ isOpen, 
                 <button
                   key={colorKey}
                   onClick={() => setColor(colorKey)}
-                  className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
+                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all ${
                     isSelected
-                      ? 'border-blue-900 bg-slate-50 ring-2 ring-blue-900 shadow-xs'
+                      ? 'border-slate-900 bg-slate-50 ring-2 ring-slate-900 shadow-xs'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
                   <span
-                    className="w-5 h-5 rounded-full shrink-0 shadow-xs flex items-center justify-center text-white"
+                    className="w-4 h-4 rounded-full shrink-0 shadow-xs flex items-center justify-center text-white"
                     style={{ backgroundColor: preset.previewHex }}
                   >
-                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                   </span>
-                  <span className="text-xs font-bold text-slate-800 truncate">
-                    {preset.label.split(' ')[0]}
+                  <span className="text-[11px] font-bold text-slate-800 truncate">
+                    {preset.label}
                   </span>
                 </button>
               );
