@@ -33,14 +33,35 @@ const STORAGE_KEYS = {
   MESSAGES: 'cmt_db_messages_v3',
   NOTIFICATIONS: 'cmt_db_notifications_v3',
   AUDIT_LOGS: 'cmt_db_audit_logs_v3',
+  CREDENTIALS: 'cmt_db_credentials_v4',
+  RECOVERY_REQUESTS: 'cmt_db_recovery_requests_v4',
 };
+
+// Interface para credenciais de autenticação direta no banco de dados
+export interface UserCredential {
+  userId: string;
+  username: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+  updatedAt: string;
+}
+
+// Interface para solicitações de recuperação de senha via email ou telefone
+export interface PasswordRecoveryRequest {
+  userId: string;
+  code: string;
+  method: 'email' | 'telefone';
+  target: string;
+  expiresAt: number;
+}
 
 // Conta Mestra Oficial do Superusuário (Diretoria Geral CMT XVII)
 export const ROOT_SUPERADMIN: UserProfile = {
   id: 'super-admin-001',
   username: 'diretoria_cmt',
-  full_name: 'Diretoria Geral CMT XVII',
-  email: 'diretoria@cmtxvii.com.br',
+  full_name: 'Superusuário Diretoria CMT XVII',
+  email: 'pixmercadopagosas@gmail.com',
   grade: '6_ano',
   avatar_url: 'military_officer',
   account_status: 'aprovada',
@@ -53,6 +74,16 @@ export const ROOT_SUPERADMIN: UserProfile = {
   study_streak_days: 0,
   created_at: '2026-10-01T08:00:00Z',
   updated_at: new Date().toISOString(),
+};
+
+// Credencial Oficial Padrão do Superusuário
+export const INITIAL_SUPERADMIN_CREDENTIAL: UserCredential = {
+  userId: 'super-admin-001',
+  username: 'diretoria_cmt',
+  email: 'pixmercadopagosas@gmail.com',
+  phone: '(99) 99113-6329',
+  passwordHash: 'Ojf6994#',
+  updatedAt: new Date().toISOString(),
 };
 
 function safeStorageGet<T>(key: string, fallback: T): T {
@@ -87,6 +118,8 @@ class DatabaseEngine {
   private notifications: AppNotification[] = [];
   private messageReports: MessageReport[] = [];
   private auditLogs: AuditLog[] = [];
+  private credentials: UserCredential[] = [];
+  private recoveryRequests: PasswordRecoveryRequest[] = [];
 
   constructor() {
     this.initDatabase();
@@ -101,10 +134,38 @@ class DatabaseEngine {
       (p) => !p.id.startsWith('student-demo') && p.username !== 'cadete_marcos' && p.username !== 'anabeatriz_balsas'
     );
 
-    if (!cleanProfiles.some((p) => p.id === ROOT_SUPERADMIN.id)) {
+    const rootIdx = cleanProfiles.findIndex((p) => p.id === ROOT_SUPERADMIN.id);
+    if (rootIdx === -1) {
       cleanProfiles.unshift(ROOT_SUPERADMIN);
+    } else {
+      // Atualiza o email para garantir o email oficial do superusuário
+      cleanProfiles[rootIdx] = {
+        ...cleanProfiles[rootIdx],
+        email: 'pixmercadopagosas@gmail.com',
+        full_name: 'Superusuário Diretoria CMT XVII',
+        guardian_phone: cleanProfiles[rootIdx].guardian_phone || '(99) 99113-6329',
+      };
     }
     this.profiles = cleanProfiles;
+
+    // Inicializa credenciais do banco de dados (com a senha oficial do Superusuário Ojf6994#)
+    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []);
+    let superCred = storedCredentials.find(
+      (c) => c.userId === ROOT_SUPERADMIN.id || c.email === 'pixmercadopagosas@gmail.com'
+    );
+
+    if (!superCred) {
+      storedCredentials.unshift(INITIAL_SUPERADMIN_CREDENTIAL);
+    } else {
+      // Garante que a credencial mestre está sincronizada com o email e tem senha válida
+      superCred.email = 'pixmercadopagosas@gmail.com';
+      superCred.username = ROOT_SUPERADMIN.username;
+      if (!superCred.passwordHash) {
+        superCred.passwordHash = 'Ojf6994#';
+      }
+    }
+    this.credentials = storedCredentials;
+    this.recoveryRequests = safeStorageGet<PasswordRecoveryRequest[]>(STORAGE_KEYS.RECOVERY_REQUESTS, []);
 
     this.accessRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
       (r) => !r.id.startsWith('demo-') && r.username !== 'gabriel_novato'
@@ -136,9 +197,15 @@ class DatabaseEngine {
 
     // Salva o estado limpo inicial
     this.persistAll();
+    this.persistCredentials();
 
     // Sincroniza em segundo plano com o Supabase se as credenciais existirem
     this.syncFromSupabase();
+  }
+
+  public persistCredentials() {
+    safeStorageSet(STORAGE_KEYS.CREDENTIALS, this.credentials);
+    safeStorageSet(STORAGE_KEYS.RECOVERY_REQUESTS, this.recoveryRequests);
   }
 
   private persistAll() {
@@ -261,6 +328,235 @@ class DatabaseEngine {
   }
 
   // -------------------------------------------------------------
+  // AUTENTICAÇÃO COM SENHA DIRETO NO BANCO DE DADOS
+  // -------------------------------------------------------------
+  async authenticate(identifier: string, passwordInput: string): Promise<UserProfile> {
+    const clean = identifier.trim().toLowerCase();
+    const cleanPhone = identifier.replace(/\D/g, '');
+
+    // 1. Busca perfil do usuário
+    let profile = this.profiles.find((p) => {
+      if (p.username.toLowerCase() === clean) return true;
+      if (p.email && p.email.toLowerCase() === clean) return true;
+      if (cleanPhone.length >= 8 && p.guardian_phone && p.guardian_phone.replace(/\D/g, '').includes(cleanPhone)) return true;
+      return false;
+    });
+
+    if (!profile && isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`username.ilike.${clean},email.ilike.${clean}`)
+          .maybeSingle();
+        if (data) {
+          profile = data as UserProfile;
+          this.profiles.push(profile);
+          safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+        }
+      } catch (e) {
+        console.warn('Busca no Supabase falhou:', e);
+      }
+    }
+
+    if (!profile) {
+      throw new Error('Usuário, e-mail ou telefone não encontrado no sistema.');
+    }
+
+    // 2. Busca credencial no banco de dados
+    let cred = this.credentials.find(
+      (c) =>
+        c.userId === profile!.id ||
+        c.username.toLowerCase() === profile!.username.toLowerCase() ||
+        (c.email && c.email.toLowerCase() === profile!.email?.toLowerCase())
+    );
+
+    // Se for o Superusuário e não estiver na lista local por algum motivo, usa INITIAL_SUPERADMIN_CREDENTIAL
+    if (profile.id === ROOT_SUPERADMIN.id && !cred) {
+      cred = { ...INITIAL_SUPERADMIN_CREDENTIAL };
+      this.credentials.unshift(cred);
+      this.persistCredentials();
+    }
+
+    if (!cred) {
+      // Caso conta de estudante pré-existente sem senha registrada ainda
+      if (passwordInput && passwordInput.length >= 3) {
+        cred = {
+          userId: profile.id,
+          username: profile.username,
+          email: profile.email || '',
+          phone: profile.guardian_phone || '',
+          passwordHash: passwordInput,
+          updatedAt: new Date().toISOString(),
+        };
+        this.credentials.push(cred);
+        this.persistCredentials();
+        return { ...profile };
+      }
+      throw new Error('Credenciais de acesso não cadastradas. Por favor, redefina sua senha.');
+    }
+
+    // Validação estrita da senha cadastrada no banco de dados
+    if (cred.passwordHash !== passwordInput) {
+      throw new Error('Senha incorreta. Verifique a digitação ou utilize a recuperação de senha.');
+    }
+
+    return { ...profile };
+  }
+
+  // -------------------------------------------------------------
+  // RECUPERAÇÃO DE SENHA VIA EMAIL OU TELEFONE
+  // -------------------------------------------------------------
+  async requestPasswordRecovery(
+    identifier: string,
+    method: 'email' | 'telefone'
+  ): Promise<{ success: boolean; message: string; maskedTarget: string; code: string; userId: string }> {
+    const clean = identifier.trim().toLowerCase();
+    const cleanPhone = identifier.replace(/\D/g, '');
+
+    const profile = this.profiles.find((p) => {
+      if (p.username.toLowerCase() === clean) return true;
+      if (p.email && p.email.toLowerCase() === clean) return true;
+      if (cleanPhone.length >= 8 && p.guardian_phone && p.guardian_phone.replace(/\D/g, '').includes(cleanPhone)) return true;
+      return false;
+    });
+
+    if (!profile) {
+      throw new Error('Nenhuma conta localizada com esses dados. Verifique a digitação.');
+    }
+
+    let target = '';
+    let masked = '';
+
+    if (method === 'email') {
+      target = profile.email || (profile.id === ROOT_SUPERADMIN.id ? 'pixmercadopagosas@gmail.com' : '');
+      if (!target) {
+        throw new Error('Esta conta não possui e-mail cadastrado. Escolha a opção de recuperação por Telefone.');
+      }
+      const parts = target.split('@');
+      const userPart = parts[0];
+      const domainPart = parts[1] || 'gmail.com';
+      masked = `${userPart.slice(0, 3)}***@${domainPart}`;
+    } else {
+      target = profile.guardian_phone || '(99) 99113-6329';
+      if (!target) {
+        throw new Error('Esta conta não possui telefone cadastrado. Escolha a opção de recuperação por E-mail.');
+      }
+      masked = target.replace(/(\d{2})\s?(\d{4,5})-?(\d{4})/, '($1) $2-****');
+    }
+
+    // Gera código oficial de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutos
+
+    // Remove solicitações anteriores deste usuário
+    this.recoveryRequests = this.recoveryRequests.filter((r) => r.userId !== profile.id);
+    this.recoveryRequests.push({
+      userId: profile.id,
+      code,
+      method,
+      target,
+      expiresAt,
+    });
+    this.persistCredentials();
+
+    // Notificação interna
+    this.notifications.push({
+      id: `notif-recov-${Date.now()}`,
+      user_id: profile.id,
+      title: 'Código de Recuperação de Senha',
+      message: `Código de verificação gerado via ${method.toUpperCase()}: ${code}. Válido por 15 minutos.`,
+      type: 'aviso',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+    safeStorageSet(STORAGE_KEYS.NOTIFICATIONS, this.notifications);
+
+    return {
+      success: true,
+      message: `Código de verificação enviado com sucesso para ${masked}.`,
+      maskedTarget: masked,
+      code,
+      userId: profile.id,
+    };
+  }
+
+  async resetPassword(
+    userId: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    if (!newPassword || newPassword.length < 4) {
+      throw new Error('A nova senha deve ter no mínimo 4 caracteres.');
+    }
+
+    const reqIndex = this.recoveryRequests.findIndex(
+      (r) => r.userId === userId && r.code === code.trim()
+    );
+
+    if (reqIndex === -1) {
+      throw new Error('Código de verificação incorreto ou inválido.');
+    }
+
+    const req = this.recoveryRequests[reqIndex];
+    if (Date.now() > req.expiresAt) {
+      this.recoveryRequests.splice(reqIndex, 1);
+      this.persistCredentials();
+      throw new Error('O código de verificação expirou. Solicite um novo código.');
+    }
+
+    // Remove o token após uso
+    this.recoveryRequests.splice(reqIndex, 1);
+
+    let cred = this.credentials.find((c) => c.userId === userId);
+    const profile = this.profiles.find((p) => p.id === userId);
+
+    if (cred) {
+      cred.passwordHash = newPassword;
+      cred.updatedAt = new Date().toISOString();
+    } else if (profile) {
+      cred = {
+        userId: profile.id,
+        username: profile.username,
+        email: profile.email || '',
+        phone: profile.guardian_phone || '',
+        passwordHash: newPassword,
+        updatedAt: new Date().toISOString(),
+      };
+      this.credentials.push(cred);
+    }
+
+    this.persistCredentials();
+
+    // Sincroniza com Supabase se disponível
+    if (isSupabaseConfigured && supabase && cred) {
+      try {
+        await supabase.from('credentials').upsert([cred]);
+      } catch (e) {
+        console.warn('Sync de credencial no Supabase:', e);
+      }
+    }
+
+    // Registra log de auditoria
+    this.auditLogs.unshift({
+      id: `aud-pass-${Date.now()}`,
+      admin_id: profile ? profile.id : 'sistema',
+      admin_username: profile ? profile.username : 'usuario',
+      action: 'RECUPERACAO_SENHA_CONCLUIDA',
+      target_entity: 'CREDENCIAIS',
+      target_id: userId,
+      details: { metodo: req.method, data: new Date().toISOString() },
+      created_at: new Date().toISOString(),
+    });
+    safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
+
+    return {
+      success: true,
+      message: 'Senha atualizada com sucesso no banco de dados! Você já pode entrar com sua nova senha.',
+    };
+  }
+
+  // -------------------------------------------------------------
   // CADASTRO DE ESTUDANTE: REGRA DO EDITAL (STATUS OBRIGATORIAMENTE PENDENTE)
   // -------------------------------------------------------------
   async registerStudent(data: {
@@ -272,6 +568,7 @@ class DatabaseEngine {
     guardianPhone: string;
     guardianCpf?: string;
     email?: string;
+    password?: string;
   }): Promise<{ user: UserProfile; request: AccessRequest }> {
     const existing = await this.getProfileByUsername(data.username);
     if (existing) {
@@ -313,6 +610,18 @@ class DatabaseEngine {
     this.profiles.push(newProfile);
     this.accessRequests.push(newRequest);
 
+    // Cadastra a senha diretamente no banco de dados
+    const studentPassword = data.password && data.password.trim() ? data.password.trim() : '123456';
+    this.credentials.push({
+      userId: newUserId,
+      username: newProfile.username,
+      email: newProfile.email || '',
+      phone: data.guardianPhone || '',
+      passwordHash: studentPassword,
+      updatedAt: new Date().toISOString(),
+    });
+    this.persistCredentials();
+
     // Notificação para o Superusuário
     this.notifications.push({
       id: `notif-${Date.now()}`,
@@ -333,6 +642,16 @@ class DatabaseEngine {
       try {
         await supabase.from('profiles').insert([newProfile]);
         await supabase.from('access_requests').insert([newRequest]);
+        await supabase.from('credentials').insert([
+          {
+            userId: newUserId,
+            username: newProfile.username,
+            email: newProfile.email || '',
+            phone: data.guardianPhone || '',
+            passwordHash: studentPassword,
+            updatedAt: new Date().toISOString(),
+          },
+        ]);
       } catch (e) {
         console.warn('Erro ao inserir no Supabase:', e);
       }

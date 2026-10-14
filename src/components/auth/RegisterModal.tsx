@@ -29,6 +29,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [grade, setGrade] = useState<GradeId>('6_ano');
   const [dailyGoal, setDailyGoal] = useState<number>(30);
   const [avatar, setAvatar] = useState('cadet_blue');
@@ -62,6 +63,11 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       return;
     }
 
+    if (password.length < 4) {
+      setErrorMsg('A senha deve ter pelo menos 4 caracteres para garantir a segurança da conta.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -73,6 +79,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
         guardianName: guardianName.trim(),
         guardianPhone: guardianPhone.trim(),
         guardianCpf: guardianCpf.trim(),
+        email: email.trim() || undefined,
+        password: password.trim(),
       });
 
       // Save initial daily goal preference
@@ -311,6 +319,22 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                E-mail do Responsável ou Candidato (Opcional, para recuperação de senha)
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="exemplo@email.com"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+              />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                Permite recuperar sua senha caso a perca posteriormente.
+              </span>
             </div>
 
             <label className="flex items-start gap-2.5 pt-2 cursor-pointer">

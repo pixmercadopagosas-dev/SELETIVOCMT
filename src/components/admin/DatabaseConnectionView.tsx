@@ -174,7 +174,7 @@ export const DatabaseConnectionView: React.FC<DatabaseConnectionViewProps> = ({
               className="px-6 py-2.5 bg-red-700 hover:bg-red-600 text-white text-xs font-black rounded-xl transition-all shadow-md inline-flex items-center gap-2"
             >
               <Database className="w-4 h-4 text-emerald-300" />
-              <span>Alternar para Superusuário (Diretoria)</span>
+              <span>Entrar como Superusuário (Exige Senha)</span>
             </button>
           )}
           <button

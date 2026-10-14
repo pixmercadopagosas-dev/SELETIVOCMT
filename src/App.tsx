@@ -65,11 +65,17 @@ function MainApp() {
 
   // Modals
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginInitialIdentifier, setLoginInitialIdentifier] = useState('');
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [supabaseModalOpen, setSupabaseModalOpen] = useState(false);
   const [themeModalOpen, setThemeModalOpen] = useState(false);
 
   const { cartoonConfig } = useAppTheme();
+
+  const handleOpenLogin = (identifier = '') => {
+    setLoginInitialIdentifier(identifier);
+    setLoginModalOpen(true);
+  };
 
   // Check stored active session on mount
   useEffect(() => {
@@ -130,6 +136,10 @@ function MainApp() {
   const handleSwitchUser = async (userId: string) => {
     setActiveLessonId(null);
     setCurrentTab('inicio');
+    if (userId === 'super-admin-001') {
+      handleOpenLogin('pixmercadopagosas@gmail.com');
+      return;
+    }
     await initUser(userId);
   };
 
@@ -232,15 +242,15 @@ function MainApp() {
                 🎨 Cores & Temas
               </button>
               <button
-                onClick={() => handleSwitchUser('super-admin-001')}
+                onClick={() => handleOpenLogin('pixmercadopagosas@gmail.com')}
                 className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-950 text-xs font-black rounded-xl border border-red-300 flex items-center gap-1.5 transition-colors shadow-xs"
-                title="Acesso exclusivo da Diretoria Geral para aprovação e liberação de alunos"
+                title="Acesso exclusivo da Diretoria Geral para aprovação e liberação de alunos (Exige Senha)"
               >
                 <Shield className="w-3.5 h-3.5 text-red-700" />
                 <span>Superusuário</span>
               </button>
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => handleOpenLogin('')}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold rounded-xl transition-colors"
               >
                 Fazer Login
@@ -273,7 +283,7 @@ function MainApp() {
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => handleOpenLogin('')}
                 className="px-6 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-extrabold text-sm shadow-md transition-all inline-flex items-center gap-2"
               >
                 <span>Acessar com Login e Senha</span>
@@ -286,11 +296,12 @@ function MainApp() {
                 Cadastrar Novo Estudante
               </button>
               <button
-                onClick={() => handleSwitchUser('super-admin-001')}
+                onClick={() => handleOpenLogin('pixmercadopagosas@gmail.com')}
                 className="px-5 py-3 bg-red-100 hover:bg-red-200 border border-red-300 text-red-950 rounded-xl font-black text-sm transition-colors inline-flex items-center gap-2 shadow-xs"
+                title="Acesso exclusivo da Diretoria Geral (Exige Senha)"
               >
                 <Shield className="w-4 h-4 text-red-700" />
-                <span>Painel Superusuário (Liberar Alunos)</span>
+                <span>Painel Superusuário (Exige Senha)</span>
               </button>
             </div>
           </div>
@@ -516,6 +527,7 @@ function MainApp() {
 
       <LoginModal
         isOpen={loginModalOpen}
+        initialIdentifier={loginInitialIdentifier}
         onClose={() => setLoginModalOpen(false)}
         onLoginSuccess={(u) => {
           setCurrentUser(u);
