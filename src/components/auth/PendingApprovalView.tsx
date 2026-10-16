@@ -1,22 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../../types';
 import { CmtLogo } from '../common/CmtLogo';
-import { Clock, ShieldAlert, Phone, MapPin, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
+import { Clock, ShieldAlert, Phone, MapPin, RefreshCw, LogOut, CheckCircle2, Lock } from 'lucide-react';
 import { db } from '../../lib/databaseEngine';
 
 interface PendingApprovalViewProps {
   currentUser: UserProfile;
   onStatusUpdated: (updatedUser: UserProfile) => void;
   onLogout: () => void;
+  onOpenSuperUserLogin?: () => void;
 }
 
 export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
   currentUser,
   onStatusUpdated,
   onLogout,
+  onOpenSuperUserLogin,
 }) => {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Auto-verificação contínua em tempo real da liberação do Superusuário
+  useEffect(() => {
+    const checkSilent = async () => {
+      try {
+        const fresh = await db.getProfileById(currentUser.id);
+        if (fresh && fresh.account_status === 'aprovada') {
+          onStatusUpdated(fresh);
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(checkSilent, 3500);
+
+    const handleDbUpdate = () => {
+      checkSilent();
+    };
+    window.addEventListener('cmt_db_updated', handleDbUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cmt_db_updated', handleDbUpdate);
+    };
+  }, [currentUser.id]);
 
   const handleCheckStatus = async () => {
     setChecking(true);
@@ -93,7 +119,7 @@ export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
           <button
             onClick={handleCheckStatus}
             disabled={checking}
-            className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all inline-flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
             <span>{checking ? 'Verificando...' : 'Verificar Status de Aprovação'}</span>
@@ -101,12 +127,24 @@ export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
 
           <button
             onClick={onLogout}
-            className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sair</span>
           </button>
         </div>
+
+        {onOpenSuperUserLogin && (
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              onClick={onOpenSuperUserLogin}
+              className="text-xs text-red-700 hover:text-red-900 font-bold inline-flex items-center gap-1.5 hover:underline cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5 text-red-600" />
+              <span>Sou o Superusuário da Diretoria (Acessar Painel de Aprovação)</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

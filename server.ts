@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
@@ -399,7 +400,301 @@ app.get('/api/admin/database-diagnostics', async (req, res) => {
 });
 
 // =================================================================
-// 4. INTEGRAÇÃO VITE (DEV MIDDLEWARE OU PRODUÇÃO STATIC)
+// 4. PERSISTÊNCIA CENTRAL DO BANCO DE DADOS (SERVIDOR MULTI-DISPOSITIVO)
+// =================================================================
+const DB_FILE_PATH = path.resolve('data/cmt_database.json');
+
+interface ServerDbData {
+  profiles: any[];
+  accessRequests: any[];
+  credentials: any[];
+  auditLogs: any[];
+}
+
+function getInitialServerDb(): ServerDbData {
+  return {
+    profiles: [
+      {
+        id: 'super-admin-001',
+        username: 'diretoria_cmt',
+        full_name: 'Superusuário Diretoria CMT XVII',
+        email: 'pixmercadopagosas@gmail.com',
+        grade: '6_ano',
+        avatar_url: 'cadet_gold',
+        account_status: 'aprovada',
+        role: 'superusuario',
+        guardian_name: 'Comando Geral PMMA',
+        guardian_phone: '(99) 99113-6329',
+        guardian_cpf: '000.000.000-00',
+        agreed_terms: true,
+        total_stars: 999,
+        total_points: 5000,
+        study_streak_days: 30,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
+    accessRequests: [],
+    credentials: [
+      {
+        userId: 'super-admin-001',
+        username: 'diretoria_cmt',
+        email: 'pixmercadopagosas@gmail.com',
+        phone: '(99) 99113-6329',
+        passwordHash: 'Ojf6994#',
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    auditLogs: [
+      {
+        id: 'aud-server-init',
+        admin_id: 'super-admin-001',
+        admin_username: 'diretoria_cmt',
+        action: 'SISTEMA_SERVIDOR_INICIADO',
+        target_entity: 'PLATAFORMA',
+        target_id: 'cmt-xvii-server',
+        details: { status: 'ativo', storage: 'data/cmt_database.json' },
+        created_at: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+function loadServerDb(): ServerDbData {
+  try {
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const raw = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (!parsed.profiles) parsed.profiles = [];
+      const supIdx = parsed.profiles.findIndex((p: any) => p.id === 'super-admin-001' || p.username === 'diretoria_cmt');
+      if (supIdx === -1) {
+        parsed.profiles.unshift(getInitialServerDb().profiles[0]);
+      } else {
+        parsed.profiles[supIdx].email = 'pixmercadopagosas@gmail.com';
+        parsed.profiles[supIdx].account_status = 'aprovada';
+        parsed.profiles[supIdx].role = 'superusuario';
+      }
+      if (!parsed.credentials) parsed.credentials = [];
+      const credIdx = parsed.credentials.findIndex((c: any) => c.userId === 'super-admin-001' || c.email === 'pixmercadopagosas@gmail.com');
+      if (credIdx === -1) {
+        parsed.credentials.unshift(getInitialServerDb().credentials[0]);
+      } else {
+        parsed.credentials[credIdx].email = 'pixmercadopagosas@gmail.com';
+        if (!parsed.credentials[credIdx].passwordHash) {
+          parsed.credentials[credIdx].passwordHash = 'Ojf6994#';
+        }
+      }
+      if (!parsed.accessRequests) parsed.accessRequests = [];
+      if (!parsed.auditLogs) parsed.auditLogs = [];
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Erro ao ler DB do servidor:', err);
+  }
+  const init = getInitialServerDb();
+  saveServerDb(init);
+  return init;
+}
+
+function saveServerDb(data: ServerDbData) {
+  try {
+    const dir = path.dirname(DB_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Erro ao salvar DB do servidor:', err);
+  }
+}
+
+// 4.1 Retornar estado completo do banco de dados para os clientes
+app.get('/api/db/state', (req, res) => {
+  const db = loadServerDb();
+  res.json({
+    success: true,
+    profiles: db.profiles,
+    accessRequests: db.accessRequests,
+    credentials: db.credentials,
+    auditLogs: db.auditLogs,
+  });
+});
+
+// 4.2 Cadastro de estudante compartilhado
+app.post('/api/db/register', (req, res) => {
+  try {
+    const data = req.body;
+    if (!data.username || !data.fullName) {
+      return res.status(400).json({ error: 'Dados incompletos para cadastro.' });
+    }
+
+    const db = loadServerDb();
+    const cleanUsername = data.username.toLowerCase().trim();
+
+    if (db.profiles.some((p: any) => p.username.toLowerCase() === cleanUsername)) {
+      return res.status(400).json({ error: `O nome de usuário "${data.username}" já está cadastrado.` });
+    }
+
+    const newUserId = `std-${Date.now()}`;
+    const newProfile = {
+      id: newUserId,
+      username: cleanUsername,
+      full_name: data.fullName.trim(),
+      email: data.email || `${cleanUsername}@estudante.cmt.br`,
+      grade: data.grade || '6_ano',
+      avatar_url: data.avatarUrl || 'cadet_blue',
+      account_status: 'pendente',
+      role: 'estudante',
+      guardian_name: data.guardianName || 'Responsável Legal',
+      guardian_phone: data.guardianPhone || '',
+      guardian_cpf: data.guardianCpf || '',
+      agreed_terms: true,
+      total_stars: 0,
+      total_points: 0,
+      study_streak_days: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const newRequest = {
+      id: `req-${Date.now()}`,
+      user_id: newUserId,
+      username: cleanUsername,
+      grade: newProfile.grade,
+      guardian_name: newProfile.guardian_name,
+      guardian_phone: newProfile.guardian_phone,
+      requested_at: new Date().toISOString(),
+      status: 'pendente',
+    };
+
+    const newCredential = {
+      userId: newUserId,
+      username: cleanUsername,
+      email: newProfile.email,
+      phone: newProfile.guardian_phone,
+      passwordHash: data.password || '123456',
+      updatedAt: new Date().toISOString(),
+    };
+
+    db.profiles.push(newProfile);
+    db.accessRequests.push(newRequest);
+    db.credentials.push(newCredential);
+    db.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      admin_id: 'sistema',
+      admin_username: 'cadastro_aluno',
+      action: 'NOVA_SOLICITACAO_MATRICULA',
+      target_entity: 'ACCESS_REQUEST',
+      target_id: newUserId,
+      details: { username: cleanUsername, grade: newProfile.grade },
+      created_at: new Date().toISOString(),
+    });
+
+    saveServerDb(db);
+
+    return res.json({
+      success: true,
+      user: newProfile,
+      request: newRequest,
+    });
+  } catch (err: any) {
+    console.error('Erro na rota /api/db/register:', err);
+    return res.status(500).json({ error: err.message || 'Erro no servidor ao registrar aluno' });
+  }
+});
+
+// 4.3 Homologação / Aprovação de acesso pelo Superusuário
+app.post('/api/db/approve', (req, res) => {
+  try {
+    const { adminId, targetUserId, newStatus, reason } = req.body;
+    const db = loadServerDb();
+
+    const targetIdx = db.profiles.findIndex((p: any) => p.id === targetUserId);
+    if (targetIdx === -1) {
+      return res.status(404).json({ error: 'Estudante não encontrado no banco de dados.' });
+    }
+
+    db.profiles[targetIdx].account_status = newStatus;
+    db.profiles[targetIdx].updated_at = new Date().toISOString();
+
+    const reqItem = db.accessRequests.find((r: any) => r.user_id === targetUserId);
+    if (reqItem) {
+      reqItem.status = newStatus === 'aprovada' ? 'aprovado' : 'recusado';
+      reqItem.reviewed_at = new Date().toISOString();
+      reqItem.reviewed_by = adminId || 'super-admin-001';
+      reqItem.rejection_reason = reason;
+    }
+
+    db.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      admin_id: adminId || 'super-admin-001',
+      admin_username: 'diretoria_cmt',
+      action: 'ALTERACAO_STATUS_CONTA',
+      target_entity: 'USER_PROFILE',
+      target_id: targetUserId,
+      details: { novo_status: newStatus, motivo: reason },
+      created_at: new Date().toISOString(),
+    });
+
+    saveServerDb(db);
+
+    return res.json({
+      success: true,
+      user: db.profiles[targetIdx],
+      request: reqItem,
+    });
+  } catch (err: any) {
+    console.error('Erro na rota /api/db/approve:', err);
+    return res.status(500).json({ error: err.message || 'Erro ao homologar cadastro' });
+  }
+});
+
+// 4.4 Sincronização bidirecional entre cliente e servidor
+app.post('/api/db/sync', (req, res) => {
+  try {
+    const { profiles = [], accessRequests = [] } = req.body;
+    const db = loadServerDb();
+
+    // Mescla perfis locais recebidos do cliente
+    for (const p of profiles) {
+      const idx = db.profiles.findIndex((item: any) => item.id === p.id || item.username === p.username);
+      if (idx === -1) {
+        db.profiles.push(p);
+      } else {
+        // Preserva o mais recente
+        if (p.updated_at && (!db.profiles[idx].updated_at || new Date(p.updated_at) > new Date(db.profiles[idx].updated_at))) {
+          db.profiles[idx] = { ...db.profiles[idx], ...p };
+        }
+      }
+    }
+
+    // Mescla solicitações de acesso
+    for (const r of accessRequests) {
+      const idx = db.accessRequests.findIndex((item: any) => item.id === r.id || item.user_id === r.user_id);
+      if (idx === -1) {
+        db.accessRequests.push(r);
+      } else {
+        if (r.status !== db.accessRequests[idx].status) {
+          db.accessRequests[idx] = { ...db.accessRequests[idx], ...r };
+        }
+      }
+    }
+
+    saveServerDb(db);
+
+    return res.json({
+      success: true,
+      profiles: db.profiles,
+      accessRequests: db.accessRequests,
+      credentials: db.credentials,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// =================================================================
+// 5. INTEGRAÇÃO VITE (DEV MIDDLEWARE OU PRODUÇÃO STATIC)
 // =================================================================
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';

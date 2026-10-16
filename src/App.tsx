@@ -59,6 +59,7 @@ function MainApp() {
   const [userProgressList, setUserProgressList] = useState<LessonProgress[]>([]);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Responsive mobile drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -87,6 +88,18 @@ function MainApp() {
       localStorage.removeItem('cmt_current_user_id');
       setCurrentUser(null);
     }
+
+    // Ouvinte global para atualização de pendências entre abas
+    const handleDbChange = () => {
+      const activeId = localStorage.getItem('cmt_current_user_id');
+      if (activeId) {
+        loadUserData(activeId);
+      }
+    };
+    window.addEventListener('cmt_db_updated', handleDbChange);
+    return () => {
+      window.removeEventListener('cmt_db_updated', handleDbChange);
+    };
   }, []);
 
   const initUser = async (userId: string) => {
@@ -94,6 +107,9 @@ function MainApp() {
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('cmt_current_user_id', user.id);
+      if (user.role === 'superusuario') {
+        setCurrentTab('admin');
+      }
       loadUserData(user.id);
     } else {
       localStorage.removeItem('cmt_current_user_id');
@@ -111,12 +127,16 @@ function MainApp() {
   const handleLoginSuccess = async (user: UserProfile) => {
     localStorage.setItem('cmt_current_user_id', user.id);
     setCurrentUser(user);
+    if (user.role === 'superusuario') {
+      setCurrentTab('admin');
+    }
     await loadUserData(user.id);
   };
 
   const handleRegisterSuccess = (user: UserProfile) => {
     localStorage.setItem('cmt_current_user_id', user.id);
     setCurrentUser(user);
+    loadUserData(user.id);
   };
 
   const loadUserData = async (userId: string) => {
@@ -125,21 +145,23 @@ function MainApp() {
     const allProg = await db.getAllUserProgress(userId);
     const qAtt = await db.getUserQuizAttempts(userId);
     const notifs = await db.getUserNotifications(userId);
+    const reqs = await db.getAccessRequests();
 
     setStudyPreferences(prefs);
     setLastStudiedProgress(last);
     setUserProgressList(allProg);
     setQuizAttempts(qAtt);
     setUnreadNotificationsCount(notifs.filter((n) => !n.is_read).length);
+    setPendingRequestsCount(reqs.filter((r) => r.status === 'pendente').length);
   };
 
   const handleSwitchUser = async (userId: string) => {
     setActiveLessonId(null);
-    setCurrentTab('inicio');
     if (userId === 'super-admin-001') {
       handleOpenLogin('pixmercadopagosas@gmail.com');
       return;
     }
+    setCurrentTab('inicio');
     await initUser(userId);
   };
 
@@ -181,10 +203,32 @@ function MainApp() {
             loadUserData(updated.id);
           }}
           onLogout={handleLogout}
+          onOpenSuperUserLogin={() => handleOpenLogin('pixmercadopagosas@gmail.com')}
         />
         <ThemeSelectorModal
           isOpen={themeModalOpen}
           onClose={() => setThemeModalOpen(false)}
+        />
+        <LoginModal
+          isOpen={loginModalOpen}
+          initialIdentifier={loginInitialIdentifier}
+          onClose={() => setLoginModalOpen(false)}
+          onLoginSuccess={(u) => {
+            handleLoginSuccess(u);
+          }}
+          onOpenRegister={() => {
+            setLoginModalOpen(false);
+            setRegisterModalOpen(true);
+          }}
+        />
+        <RegisterModal
+          isOpen={registerModalOpen}
+          onClose={() => setRegisterModalOpen(false)}
+          onRegisterSuccess={handleRegisterSuccess}
+          onOpenLogin={() => {
+            setRegisterModalOpen(false);
+            handleOpenLogin();
+          }}
         />
       </div>
     );
@@ -395,6 +439,7 @@ function MainApp() {
           isOpenMobile={mobileMenuOpen}
           onCloseMobile={() => setMobileMenuOpen(false)}
           onSwitchToSuperUser={() => handleSwitchUser('super-admin-001')}
+          pendingRequestsCount={pendingRequestsCount}
         />
 
         <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
@@ -530,19 +575,24 @@ function MainApp() {
         initialIdentifier={loginInitialIdentifier}
         onClose={() => setLoginModalOpen(false)}
         onLoginSuccess={(u) => {
-          setCurrentUser(u);
-          loadUserData(u.id);
+          handleLoginSuccess(u);
         }}
-        onOpenRegister={() => setRegisterModalOpen(true)}
+        onOpenRegister={() => {
+          setLoginModalOpen(false);
+          setRegisterModalOpen(true);
+        }}
       />
 
       <RegisterModal
         isOpen={registerModalOpen}
         onClose={() => setRegisterModalOpen(false)}
         onRegisterSuccess={(u) => {
-          setCurrentUser(u);
+          handleRegisterSuccess(u);
         }}
-        onOpenLogin={() => setLoginModalOpen(true)}
+        onOpenLogin={() => {
+          setRegisterModalOpen(false);
+          handleOpenLogin();
+        }}
       />
 
       {/* Supabase Status Modal (Acesso restrito ao Superusuário) */}

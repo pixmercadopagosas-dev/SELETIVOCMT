@@ -28,6 +28,7 @@ import {
   X,
   ExternalLink,
   Download,
+  RefreshCw,
 } from 'lucide-react';
 import { db } from '../../lib/databaseEngine';
 import { testSupabaseConnection, isSupabaseConfigured, SupabaseConfigStatus } from '../../lib/supabase';
@@ -51,6 +52,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [reports, setReports] = useState<MessageReport[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [loadingData, setLoadingData] = useState(false);
 
   // Student detailed dossier inspection
   const [inspectedUser, setInspectedUser] = useState<UserProfile | null>(null);
@@ -72,17 +74,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     loadAdminData();
+
+    // Sincronização periódica em tempo real (polling a cada 3 segundos)
+    const interval = setInterval(() => {
+      loadAdminData(true);
+    }, 3000);
+
+    // Ouvinte de eventos entre abas e janelas
+    const handleDbUpdate = () => {
+      loadAdminData(true);
+    };
+    window.addEventListener('cmt_db_updated', handleDbUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cmt_db_updated', handleDbUpdate);
+    };
   }, [currentAdmin.id]);
 
-  const loadAdminData = async () => {
-    const users = await db.getAllProfiles();
-    const reqs = await db.getAccessRequests();
-    const logs = await db.getAuditLogs();
-    const reps = await db.getReports();
-    setAllUsers(users);
-    setRequests(reqs);
-    setAuditLogs(logs);
-    setReports(reps);
+  const loadAdminData = async (silent = false) => {
+    if (!silent) setLoadingData(true);
+    try {
+      const users = await db.getAllProfiles();
+      const reqs = await db.getAccessRequests();
+      const logs = await db.getAuditLogs();
+      const reps = await db.getReports();
+      setAllUsers(users);
+      setRequests(reqs);
+      setAuditLogs(logs);
+      setReports(reps);
+    } finally {
+      if (!silent) setLoadingData(false);
+    }
   };
 
   const handleApprove = async (userId: string) => {
@@ -204,7 +227,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   });
 
-  const pendingRequests = requests.filter((r) => r.status === 'pendente');
+  // Combina solicitações com qualquer perfil que esteja com status 'pendente'
+  const pendingRequests = React.useMemo(() => {
+    const list = [...requests.filter((r) => r.status === 'pendente')];
+    for (const u of allUsers) {
+      if (u.account_status === 'pendente') {
+        const already = list.some((r) => r.user_id === u.id || r.username.toLowerCase() === u.username.toLowerCase());
+        if (!already) {
+          list.push({
+            id: `req-${u.id}`,
+            user_id: u.id,
+            username: u.username,
+            grade: u.grade,
+            guardian_name: u.guardian_name || 'Responsável Legal',
+            guardian_phone: u.guardian_phone || '',
+            requested_at: u.created_at || new Date().toISOString(),
+            status: 'pendente',
+          });
+        }
+      }
+    }
+    return list;
+  }, [requests, allUsers]);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-200">
@@ -319,13 +363,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================================= */}
       {activeTab === 'solicitacoes' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-slate-900">
-              Solicitações de Acesso Aguardando Homologação da Diretoria
-            </h2>
-            <span className="text-xs text-slate-500 font-semibold">
-              Regra: Contas novas iniciam como PENDENTE
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900">
+                Solicitações de Acesso Aguardando Homologação da Diretoria
+              </h2>
+              <span className="text-xs text-slate-500 font-semibold">
+                Regra: Contas novas iniciam como PENDENTE de liberação do Superusuário
+              </span>
+            </div>
+            <button
+              onClick={() => loadAdminData(false)}
+              disabled={loadingData}
+              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto cursor-pointer border border-slate-200"
+              title="Sincronizar fila de aprovações em tempo real"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin text-red-600' : ''}`} />
+              <span>{loadingData ? 'Sincronizando...' : 'Atualizar Fila'}</span>
+            </button>
           </div>
 
           {pendingRequests.length === 0 ? (

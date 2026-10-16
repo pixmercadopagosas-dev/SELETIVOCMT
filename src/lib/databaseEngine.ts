@@ -120,9 +120,120 @@ class DatabaseEngine {
   private auditLogs: AuditLog[] = [];
   private credentials: UserCredential[] = [];
   private recoveryRequests: PasswordRecoveryRequest[] = [];
+  private syncChannel: BroadcastChannel | null = null;
 
   constructor() {
     this.initDatabase();
+    this.setupSyncListeners();
+  }
+
+  private setupSyncListeners() {
+    if (typeof window !== 'undefined') {
+      try {
+        if ('BroadcastChannel' in window) {
+          this.syncChannel = new BroadcastChannel('cmt_db_sync_bus');
+          this.syncChannel.onmessage = (event) => {
+            if (event.data && (event.data.type === 'DB_CHANGE' || event.data.type === 'STUDENT_REGISTERED')) {
+              this.reloadFromStorage();
+              window.dispatchEvent(new CustomEvent('cmt_db_updated', { detail: event.data }));
+            }
+          };
+        }
+
+        window.addEventListener('storage', (e) => {
+          if (e.key && e.key.startsWith('cmt_db_')) {
+            this.reloadFromStorage();
+            window.dispatchEvent(new CustomEvent('cmt_db_updated', { detail: { key: e.key } }));
+          }
+        });
+      } catch (err) {
+        console.warn('Sync listeners warning:', err);
+      }
+    }
+  }
+
+  private broadcastChange(type: string, payload?: any) {
+    if (this.syncChannel) {
+      try {
+        this.syncChannel.postMessage({ type, payload, timestamp: Date.now() });
+      } catch {}
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cmt_db_updated', { detail: { type, payload } }));
+    }
+  }
+
+  public reloadFromStorage() {
+    const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
+    if (storedProfiles.length > 0) {
+      this.profiles = storedProfiles;
+    }
+    const storedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []);
+    if (storedRequests.length > 0) {
+      this.accessRequests = storedRequests;
+    }
+    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []);
+    if (storedCredentials.length > 0) {
+      this.credentials = storedCredentials;
+    }
+    const storedLogs = safeStorageGet<AuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, []);
+    if (storedLogs.length > 0) {
+      this.auditLogs = storedLogs;
+    }
+  }
+
+  // Sincronização em tempo real com o servidor central (/api/db/state)
+  public async syncWithServer(): Promise<void> {
+    try {
+      const res = await fetch('/api/db/state');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success) {
+          if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+            for (const sp of data.profiles) {
+              const idx = this.profiles.findIndex((p) => p.id === sp.id || p.username === sp.username);
+              if (idx >= 0) {
+                this.profiles[idx] = { ...this.profiles[idx], ...sp };
+              } else {
+                this.profiles.push(sp);
+              }
+            }
+            safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+          }
+
+          if (Array.isArray(data.accessRequests) && data.accessRequests.length > 0) {
+            for (const req of data.accessRequests) {
+              const idx = this.accessRequests.findIndex((r) => r.id === req.id || r.user_id === req.user_id);
+              if (idx >= 0) {
+                this.accessRequests[idx] = { ...this.accessRequests[idx], ...req };
+              } else {
+                this.accessRequests.push(req);
+              }
+            }
+            safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+          }
+
+          if (Array.isArray(data.credentials) && data.credentials.length > 0) {
+            for (const cr of data.credentials) {
+              const idx = this.credentials.findIndex((c) => c.userId === cr.userId || c.username === cr.username);
+              if (idx >= 0) {
+                this.credentials[idx] = { ...this.credentials[idx], ...cr };
+              } else {
+                this.credentials.push(cr);
+              }
+            }
+            this.persistCredentials();
+          }
+
+          if (Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+            this.auditLogs = data.auditLogs;
+            safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
+          }
+        }
+      }
+    } catch {
+      // Falha silenciosa em ambientes sem backend
+    }
   }
 
   private initDatabase() {
@@ -199,7 +310,8 @@ class DatabaseEngine {
     this.persistAll();
     this.persistCredentials();
 
-    // Sincroniza em segundo plano com o Supabase se as credenciais existirem
+    // Sincroniza em segundo plano com servidor e Supabase
+    this.syncWithServer();
     this.syncFromSupabase();
   }
 
@@ -247,7 +359,14 @@ class DatabaseEngine {
 
       const { data: remoteRequests } = await supabase.from('access_requests').select('*');
       if (remoteRequests && remoteRequests.length > 0) {
-        this.accessRequests = remoteRequests;
+        for (const rq of remoteRequests) {
+          const idx = this.accessRequests.findIndex((r) => r.id === rq.id || r.user_id === rq.user_id);
+          if (idx >= 0) {
+            this.accessRequests[idx] = { ...this.accessRequests[idx], ...rq };
+          } else {
+            this.accessRequests.push(rq);
+          }
+        }
         safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
       }
     } catch (e) {
@@ -310,20 +429,53 @@ class DatabaseEngine {
   }
 
   async getAllProfiles(): Promise<UserProfile[]> {
+    // 1. Recarrega do armazenamento local
+    const stored = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
+    for (const p of stored) {
+      const idx = this.profiles.findIndex((item) => item.id === p.id || item.username === p.username);
+      if (idx >= 0) {
+        this.profiles[idx] = { ...this.profiles[idx], ...p };
+      } else {
+        this.profiles.push(p);
+      }
+    }
+
+    // 2. Sincroniza com servidor central se disponível
+    await this.syncWithServer();
+
+    // 3. Sincroniza com Supabase se configurado
     if (isSupabaseConfigured && supabase) {
       try {
         const { data } = await supabase.from('profiles').select('*');
         if (data && data.length > 0) {
-          this.profiles = data as UserProfile[];
-          if (!this.profiles.some((p) => p.id === ROOT_SUPERADMIN.id)) {
-            this.profiles.unshift(ROOT_SUPERADMIN);
+          for (const rp of data as UserProfile[]) {
+            const idx = this.profiles.findIndex((p) => p.id === rp.id);
+            if (idx >= 0) {
+              this.profiles[idx] = { ...this.profiles[idx], ...rp };
+            } else {
+              this.profiles.push(rp);
+            }
           }
-          safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
         }
       } catch (e) {
         console.warn('Erro ao listar perfis do Supabase:', e);
       }
     }
+
+    // Garante que o Superusuário está sempre presente e com dados oficiais
+    const rootIdx = this.profiles.findIndex((p) => p.id === ROOT_SUPERADMIN.id || p.username === 'diretoria_cmt');
+    if (rootIdx === -1) {
+      this.profiles.unshift(ROOT_SUPERADMIN);
+    } else {
+      this.profiles[rootIdx] = {
+        ...this.profiles[rootIdx],
+        email: 'pixmercadopagosas@gmail.com',
+        role: 'superusuario',
+        account_status: 'aprovada',
+      };
+    }
+    safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+
     return [...this.profiles];
   }
 
@@ -637,6 +789,20 @@ class DatabaseEngine {
 
     this.persistAll();
 
+    // Sincroniza com servidor central se disponível
+    try {
+      await fetch('/api/db/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          newUserId,
+        }),
+      });
+    } catch {
+      // Ignora erro se offline ou sem servidor
+    }
+
     // Sincroniza com Supabase se configurado
     if (isSupabaseConfigured && supabase) {
       try {
@@ -656,6 +822,8 @@ class DatabaseEngine {
         console.warn('Erro ao inserir no Supabase:', e);
       }
     }
+
+    this.broadcastChange('STUDENT_REGISTERED', { user: newProfile, request: newRequest });
 
     return { user: newProfile, request: newRequest };
   }
@@ -724,6 +892,20 @@ class DatabaseEngine {
 
     this.persistAll();
 
+    // Sincroniza com servidor central se disponível
+    try {
+      await fetch('/api/db/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId,
+          targetUserId,
+          newStatus,
+          reason,
+        }),
+      });
+    } catch {}
+
     // Sincroniza atualização no Supabase se configurado
     if (isSupabaseConfigured && supabase) {
       try {
@@ -748,21 +930,71 @@ class DatabaseEngine {
       }
     }
 
+    this.broadcastChange('STATUS_UPDATE', { targetUserId, newStatus });
+
     return { ...this.profiles[targetIndex] };
   }
 
   async getAccessRequests(): Promise<AccessRequest[]> {
+    // 1. Recarrega do armazenamento local
+    const storedReqs = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []);
+    for (const r of storedReqs) {
+      const idx = this.accessRequests.findIndex((item) => item.id === r.id || item.user_id === r.user_id);
+      if (idx >= 0) {
+        this.accessRequests[idx] = { ...this.accessRequests[idx], ...r };
+      } else {
+        this.accessRequests.push(r);
+      }
+    }
+
+    // 2. Sincroniza com o servidor central
+    await this.syncWithServer();
+
+    // 3. Sincroniza com o Supabase se configurado
     if (isSupabaseConfigured && supabase) {
       try {
         const { data } = await supabase.from('access_requests').select('*');
         if (data && data.length > 0) {
-          this.accessRequests = data as AccessRequest[];
-          safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+          for (const rq of data as AccessRequest[]) {
+            const idx = this.accessRequests.findIndex((r) => r.id === rq.id || r.user_id === rq.user_id);
+            if (idx >= 0) {
+              this.accessRequests[idx] = { ...this.accessRequests[idx], ...rq };
+            } else {
+              this.accessRequests.push(rq);
+            }
+          }
         }
       } catch (e) {
         console.warn('Erro ao buscar solicitações do Supabase:', e);
       }
     }
+
+    // 4. REGRA DE SEGURANÇA INFALÍVEL:
+    // Qualquer perfil com status "pendente" DEVE constar na lista de solicitações pendentes!
+    for (const p of this.profiles) {
+      if (p.account_status === 'pendente') {
+        const existing = this.accessRequests.find(
+          (r) => r.user_id === p.id || r.username.toLowerCase() === p.username.toLowerCase()
+        );
+        if (!existing) {
+          const autoReq: AccessRequest = {
+            id: `req-${p.id}`,
+            user_id: p.id,
+            username: p.username,
+            grade: p.grade,
+            guardian_name: p.guardian_name || 'Responsável Legal',
+            guardian_phone: p.guardian_phone || '',
+            requested_at: p.created_at || new Date().toISOString(),
+            status: 'pendente',
+          };
+          this.accessRequests.unshift(autoReq);
+        } else if (existing.status !== 'pendente') {
+          existing.status = 'pendente';
+        }
+      }
+    }
+
+    safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
     return [...this.accessRequests];
   }
 
