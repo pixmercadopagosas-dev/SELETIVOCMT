@@ -18,9 +18,39 @@
       "study_streak_days": 30,
       "created_at": "2026-10-16T02:08:35.341Z",
       "updated_at": "2026-10-16T02:08:35.341Z"
+    },
+    {
+      "id": "std-1792117405952",
+      "username": "candidato_teste",
+      "full_name": "Candidato Teste Silva",
+      "email": "teste@estudante.cmt.br",
+      "grade": "6_ano",
+      "avatar_url": "cadet_blue",
+      "account_status": "pendente",
+      "role": "estudante",
+      "guardian_name": "Pai Teste",
+      "guardian_phone": "(99) 98888-7777",
+      "guardian_cpf": "",
+      "agreed_terms": true,
+      "total_stars": 0,
+      "total_points": 0,
+      "study_streak_days": 0,
+      "created_at": "2026-10-16T02:23:25.952Z",
+      "updated_at": "2026-10-16T02:23:25.952Z"
     }
   ],
-  "accessRequests": [],
+  "accessRequests": [
+    {
+      "id": "req-1792117405952",
+      "user_id": "std-1792117405952",
+      "username": "candidato_teste",
+      "grade": "6_ano",
+      "guardian_name": "Pai Teste",
+      "guardian_phone": "(99) 98888-7777",
+      "requested_at": "2026-10-16T02:23:25.952Z",
+      "status": "pendente"
+    }
+  ],
   "credentials": [
     {
       "userId": "super-admin-001",
@@ -29,9 +59,30 @@
       "phone": "(99) 99113-6329",
       "passwordHash": "Ojf6994#",
       "updatedAt": "2026-10-16T02:08:35.341Z"
+    },
+    {
+      "userId": "std-1792117405952",
+      "username": "candidato_teste",
+      "email": "teste@estudante.cmt.br",
+      "phone": "(99) 98888-7777",
+      "passwordHash": "senha123",
+      "updatedAt": "2026-10-16T02:23:25.952Z"
     }
   ],
   "auditLogs": [
+    {
+      "id": "aud-1792117405952",
+      "admin_id": "sistema",
+      "admin_username": "cadastro_aluno",
+      "action": "NOVA_SOLICITACAO_MATRICULA",
+      "target_entity": "ACCESS_REQUEST",
+      "target_id": "std-1792117405952",
+      "details": {
+        "username": "candidato_teste",
+        "grade": "6_ano"
+      },
+      "created_at": "2026-10-16T02:23:25.952Z"
+    },
     {
       "id": "aud-1792116558998",
       "admin_id": "super-admin-001",

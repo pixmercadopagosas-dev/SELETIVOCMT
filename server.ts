@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
@@ -404,6 +405,13 @@ app.get('/api/admin/database-diagnostics', async (req, res) => {
 // =================================================================
 const DB_FILE_PATH = path.resolve('data/cmt_database.json');
 
+const supabaseServerClient =
+  process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+    : null;
+
 interface ServerDbData {
   profiles: any[];
   accessRequests: any[];
@@ -508,9 +516,64 @@ function saveServerDb(data: ServerDbData) {
   }
 }
 
-// 4.1 Retornar estado completo do banco de dados para os clientes
-app.get('/api/db/state', (req, res) => {
+// 4.1 Retornar estado completo do banco de dados para os clientes (com integração Supabase)
+app.get('/api/db/state', async (req, res) => {
   const db = loadServerDb();
+
+  // Sincroniza em tempo real com o Supabase usando chave de serviço
+  if (supabaseServerClient) {
+    try {
+      const { data: supaProfiles } = await supabaseServerClient.from('profiles').select('*');
+      if (supaProfiles && supaProfiles.length > 0) {
+        for (const sp of supaProfiles) {
+          const idx = db.profiles.findIndex((p: any) => p.id === sp.id || p.username.toLowerCase() === sp.username.toLowerCase());
+          if (idx >= 0) {
+            db.profiles[idx] = { ...db.profiles[idx], ...sp };
+          } else {
+            db.profiles.push(sp);
+          }
+        }
+      }
+
+      const { data: supaReqs } = await supabaseServerClient.from('access_requests').select('*');
+      if (supaReqs && supaReqs.length > 0) {
+        for (const sr of supaReqs) {
+          const idx = db.accessRequests.findIndex((r: any) => r.id === sr.id || r.user_id === sr.user_id);
+          if (idx >= 0) {
+            db.accessRequests[idx] = { ...db.accessRequests[idx], ...sr };
+          } else {
+            db.accessRequests.push(sr);
+          }
+        }
+      }
+
+      // Regra garantida: Qualquer perfil com status 'pendente' deve constar nas solicitações
+      for (const p of db.profiles) {
+        if (p.account_status === 'pendente') {
+          const exists = db.accessRequests.some(
+            (r: any) => r.user_id === p.id || r.username.toLowerCase() === p.username.toLowerCase()
+          );
+          if (!exists) {
+            db.accessRequests.unshift({
+              id: `req-${p.id}`,
+              user_id: p.id,
+              username: p.username,
+              grade: p.grade,
+              guardian_name: p.guardian_name || 'Responsável Legal',
+              guardian_phone: p.guardian_phone || '',
+              requested_at: p.created_at || new Date().toISOString(),
+              status: 'pendente',
+            });
+          }
+        }
+      }
+
+      saveServerDb(db);
+    } catch (err) {
+      console.warn('Erro ao sincronizar com Supabase em /api/db/state:', err);
+    }
+  }
+
   res.json({
     success: true,
     profiles: db.profiles,
@@ -520,8 +583,8 @@ app.get('/api/db/state', (req, res) => {
   });
 });
 
-// 4.2 Cadastro de estudante compartilhado
-app.post('/api/db/register', (req, res) => {
+// 4.2 Cadastro de estudante compartilhado com persistência no Supabase
+app.post('/api/db/register', async (req, res) => {
   try {
     const data = req.body;
     if (!data.username || !data.fullName) {
@@ -535,12 +598,67 @@ app.post('/api/db/register', (req, res) => {
       return res.status(400).json({ error: `O nome de usuário "${data.username}" já está cadastrado.` });
     }
 
-    const newUserId = `std-${Date.now()}`;
+    let assignedUserId = data.newUserId || `std-${Date.now()}`;
+    const studentEmail = data.email && data.email.includes('@')
+      ? data.email.trim()
+      : `${cleanUsername}@estudante.cmt.br`;
+    const studentPassword = data.password && data.password.trim() ? data.password.trim() : '123456';
+
+    // Se Supabase com service_role estiver ativo, cria no auth e tabela
+    if (supabaseServerClient) {
+      try {
+        const { data: authUser, error: authErr } = await supabaseServerClient.auth.admin.createUser({
+          email: studentEmail,
+          password: studentPassword.length >= 6 ? studentPassword : `${studentPassword}123!`,
+          email_confirm: true,
+          user_metadata: {
+            username: cleanUsername,
+            full_name: data.fullName.trim(),
+            grade: data.grade || '6_ano',
+            role: 'estudante',
+          },
+        });
+
+        if (authUser?.user?.id) {
+          assignedUserId = authUser.user.id;
+        }
+
+        // Upsert do perfil garantindo status 'pendente'
+        await supabaseServerClient.from('profiles').upsert({
+          id: assignedUserId,
+          username: cleanUsername,
+          full_name: data.fullName.trim(),
+          email: studentEmail,
+          grade: data.grade || '6_ano',
+          avatar_url: data.avatarUrl || 'cadet_blue',
+          account_status: 'pendente',
+          role: 'estudante',
+          guardian_name: data.guardianName || 'Responsável Legal',
+          guardian_phone: data.guardianPhone || '',
+          guardian_cpf: data.guardianCpf || '',
+          agreed_terms: true,
+        });
+
+        // Insere a solicitação de acesso
+        await supabaseServerClient.from('access_requests').upsert({
+          user_id: assignedUserId,
+          username: cleanUsername,
+          grade: data.grade || '6_ano',
+          guardian_name: data.guardianName || 'Responsável Legal',
+          guardian_phone: data.guardianPhone || '',
+          status: 'pendente',
+          requested_at: new Date().toISOString(),
+        });
+      } catch (supaErr) {
+        console.warn('Erro ao salvar no Supabase via service_role:', supaErr);
+      }
+    }
+
     const newProfile = {
-      id: newUserId,
+      id: assignedUserId,
       username: cleanUsername,
       full_name: data.fullName.trim(),
-      email: data.email || `${cleanUsername}@estudante.cmt.br`,
+      email: studentEmail,
       grade: data.grade || '6_ano',
       avatar_url: data.avatarUrl || 'cadet_blue',
       account_status: 'pendente',
@@ -558,7 +676,7 @@ app.post('/api/db/register', (req, res) => {
 
     const newRequest = {
       id: `req-${Date.now()}`,
-      user_id: newUserId,
+      user_id: assignedUserId,
       username: cleanUsername,
       grade: newProfile.grade,
       guardian_name: newProfile.guardian_name,
@@ -568,11 +686,11 @@ app.post('/api/db/register', (req, res) => {
     };
 
     const newCredential = {
-      userId: newUserId,
+      userId: assignedUserId,
       username: cleanUsername,
       email: newProfile.email,
       phone: newProfile.guardian_phone,
-      passwordHash: data.password || '123456',
+      passwordHash: studentPassword,
       updatedAt: new Date().toISOString(),
     };
 
@@ -585,7 +703,7 @@ app.post('/api/db/register', (req, res) => {
       admin_username: 'cadastro_aluno',
       action: 'NOVA_SOLICITACAO_MATRICULA',
       target_entity: 'ACCESS_REQUEST',
-      target_id: newUserId,
+      target_id: assignedUserId,
       details: { username: cleanUsername, grade: newProfile.grade },
       created_at: new Date().toISOString(),
     });
@@ -604,18 +722,16 @@ app.post('/api/db/register', (req, res) => {
 });
 
 // 4.3 Homologação / Aprovação de acesso pelo Superusuário
-app.post('/api/db/approve', (req, res) => {
+app.post('/api/db/approve', async (req, res) => {
   try {
     const { adminId, targetUserId, newStatus, reason } = req.body;
     const db = loadServerDb();
 
     const targetIdx = db.profiles.findIndex((p: any) => p.id === targetUserId);
-    if (targetIdx === -1) {
-      return res.status(404).json({ error: 'Estudante não encontrado no banco de dados.' });
+    if (targetIdx !== -1) {
+      db.profiles[targetIdx].account_status = newStatus;
+      db.profiles[targetIdx].updated_at = new Date().toISOString();
     }
-
-    db.profiles[targetIdx].account_status = newStatus;
-    db.profiles[targetIdx].updated_at = new Date().toISOString();
 
     const reqItem = db.accessRequests.find((r: any) => r.user_id === targetUserId);
     if (reqItem) {
@@ -638,9 +754,31 @@ app.post('/api/db/approve', (req, res) => {
 
     saveServerDb(db);
 
+    // Atualiza diretamente no Supabase via service_role
+    if (supabaseServerClient) {
+      try {
+        await supabaseServerClient
+          .from('profiles')
+          .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', targetUserId);
+
+        await supabaseServerClient
+          .from('access_requests')
+          .update({
+            status: newStatus === 'aprovada' ? 'aprovado' : 'recusado',
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: adminId || 'super-admin-001',
+            rejection_reason: reason,
+          })
+          .eq('user_id', targetUserId);
+      } catch (supaErr) {
+        console.warn('Erro ao atualizar status no Supabase via service_role:', supaErr);
+      }
+    }
+
     return res.json({
       success: true,
-      user: db.profiles[targetIdx],
+      user: targetIdx !== -1 ? db.profiles[targetIdx] : null,
       request: reqItem,
     });
   } catch (err: any) {

@@ -517,7 +517,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>Ver Desempenho</span>
                       </button>
 
-                      {user.role !== 'superusuario' && (
+                      {user.account_status === 'pendente' && (
+                        <button
+                          onClick={() => handleApprove(user.id)}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] transition-colors inline-flex items-center gap-1 shadow-xs cursor-pointer"
+                          title="Aprovar matrícula deste aluno imediatamente"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Aprovar</span>
+                        </button>
+                      )}
+
+                      {user.role !== 'superusuario' && user.account_status !== 'pendente' && (
                         <button
                           onClick={() => handleToggleSuspend(user)}
                           className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-colors ${

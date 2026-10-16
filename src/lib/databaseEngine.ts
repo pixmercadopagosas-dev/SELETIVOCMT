@@ -842,17 +842,41 @@ class DatabaseEngine {
       throw new Error('Acesso negado: Somente o Superusuário possui permissão para liberar ou alterar contas.');
     }
 
-    const targetIndex = this.profiles.findIndex((p) => p.id === targetUserId);
+    let targetIndex = this.profiles.findIndex(
+      (p) =>
+        p.id === targetUserId ||
+        p.username.toLowerCase() === targetUserId.toLowerCase() ||
+        targetUserId.endsWith(p.id) ||
+        p.id.endsWith(targetUserId)
+    );
     if (targetIndex === -1) {
-      throw new Error('Estudante não encontrado no banco de dados.');
+      await this.syncWithServer();
+      this.reloadFromStorage();
+      targetIndex = this.profiles.findIndex(
+        (p) =>
+          p.id === targetUserId ||
+          p.username.toLowerCase() === targetUserId.toLowerCase() ||
+          targetUserId.endsWith(p.id) ||
+          p.id.endsWith(targetUserId)
+      );
     }
 
-    const previousStatus = this.profiles[targetIndex].account_status;
-    this.profiles[targetIndex].account_status = newStatus;
-    this.profiles[targetIndex].updated_at = new Date().toISOString();
+    if (targetIndex === -1) {
+      throw new Error(`Estudante com identificador "${targetUserId}" não foi encontrado no banco de dados.`);
+    }
+
+    const targetUser = this.profiles[targetIndex];
+    const previousStatus = targetUser.account_status;
+    targetUser.account_status = newStatus;
+    targetUser.updated_at = new Date().toISOString();
 
     // Atualiza solicitação de acesso correspondente
-    const req = this.accessRequests.find((r) => r.user_id === targetUserId);
+    const req = this.accessRequests.find(
+      (r) =>
+        r.user_id === targetUser.id ||
+        r.user_id === targetUserId ||
+        r.username.toLowerCase() === targetUser.username.toLowerCase()
+    );
     if (req) {
       req.status = newStatus === 'aprovada' ? 'aprovado' : 'recusado';
       req.reviewed_at = new Date().toISOString();
@@ -990,6 +1014,20 @@ class DatabaseEngine {
           this.accessRequests.unshift(autoReq);
         } else if (existing.status !== 'pendente') {
           existing.status = 'pendente';
+        }
+      }
+    }
+
+    // 5. Se o perfil já estiver com status 'aprovada' ou 'bloqueada', atualiza a solicitação correspondente
+    for (const r of this.accessRequests) {
+      const p = this.profiles.find(
+        (item) => item.id === r.user_id || item.username.toLowerCase() === r.username.toLowerCase()
+      );
+      if (p) {
+        if (p.account_status === 'aprovada' && r.status === 'pendente') {
+          r.status = 'aprovado';
+        } else if (p.account_status === 'bloqueada' && r.status === 'pendente') {
+          r.status = 'recusado';
         }
       }
     }

@@ -97,8 +97,18 @@ function MainApp() {
       }
     };
     window.addEventListener('cmt_db_updated', handleDbChange);
+
+    // Polling contínuo para o Superusuário receber novas solicitações em tempo real
+    const pollInterval = setInterval(() => {
+      const activeId = localStorage.getItem('cmt_current_user_id');
+      if (activeId) {
+        loadUserData(activeId);
+      }
+    }, 3500);
+
     return () => {
       window.removeEventListener('cmt_db_updated', handleDbChange);
+      clearInterval(pollInterval);
     };
   }, []);
 
