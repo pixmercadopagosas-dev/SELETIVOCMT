@@ -52,6 +52,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [reports, setReports] = useState<MessageReport[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
 
   // Student detailed dossier inspection
@@ -109,14 +110,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleApprove = async (userId: string) => {
+    setActionError(null);
     try {
-      await db.updateAccountStatus(currentAdmin.id, userId, 'aprovada', 'Matrícula conferida e aprovada pela Diretoria');
+      const adminId = currentAdmin?.id || 'super-admin-001';
+      await db.updateAccountStatus(adminId, userId, 'aprovada', 'Matrícula conferida e aprovada pela Diretoria');
       setActionSuccess(`Conta do estudante aprovada com sucesso!`);
       await loadAdminData();
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
-      alert(err.message);
+      setActionError(err.message || 'Erro ao aprovar cadastro.');
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
@@ -124,27 +128,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const reason = prompt('Informe o motivo da recusa do cadastro:', 'Documentação incompleta ou fora do prazo do edital.');
     if (!reason) return;
 
+    setActionError(null);
     try {
-      await db.updateAccountStatus(currentAdmin.id, userId, 'bloqueada', reason);
+      const adminId = currentAdmin?.id || 'super-admin-001';
+      await db.updateAccountStatus(adminId, userId, 'bloqueada', reason);
       setActionSuccess(`Solicitação recusada.`);
       await loadAdminData();
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
-      alert(err.message);
+      setActionError(err.message || 'Erro ao recusar cadastro.');
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
   const handleToggleSuspend = async (user: UserProfile) => {
     const newStatus = user.account_status === 'suspensa' ? 'aprovada' : 'suspensa';
+    setActionError(null);
     try {
-      await db.updateAccountStatus(currentAdmin.id, user.id, newStatus, `Ação manual do superusuário`);
+      const adminId = currentAdmin?.id || 'super-admin-001';
+      await db.updateAccountStatus(adminId, user.id, newStatus, `Ação manual do superusuário`);
       setActionSuccess(`Status alterado para "${newStatus}".`);
       await loadAdminData();
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
-      alert(err.message);
+      setActionError(err.message || 'Erro ao alterar status.');
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
@@ -283,6 +293,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-4 bg-red-50 border border-red-300 text-red-900 rounded-xl text-xs font-bold flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-red-700 hover:text-red-900 text-xs font-bold underline cursor-pointer"
+          >
+            Fechar
+          </button>
         </div>
       )}
 

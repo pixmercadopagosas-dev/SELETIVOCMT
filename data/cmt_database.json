@@ -1,7 +1,7 @@
 {
   "profiles": [
     {
-      "id": "super-admin-001",
+      "id": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
       "username": "diretoria_cmt",
       "full_name": "Superusuário Diretoria CMT XVII",
       "email": "pixmercadopagosas@gmail.com",
@@ -13,11 +13,11 @@
       "guardian_phone": "(99) 99113-6329",
       "guardian_cpf": "000.000.000-00",
       "agreed_terms": true,
-      "total_stars": 999,
-      "total_points": 5000,
-      "study_streak_days": 30,
-      "created_at": "2026-10-16T02:08:35.341Z",
-      "updated_at": "2026-10-16T02:08:35.341Z"
+      "total_stars": 0,
+      "total_points": 0,
+      "study_streak_days": 0,
+      "created_at": "2026-10-16T02:15:54.380534+00:00",
+      "updated_at": "2026-10-16T02:15:54.380534+00:00"
     },
     {
       "id": "std-1792117405952",
@@ -37,6 +37,44 @@
       "study_streak_days": 0,
       "created_at": "2026-10-16T02:23:25.952Z",
       "updated_at": "2026-10-16T02:23:25.952Z"
+    },
+    {
+      "id": "3b693e25-9a78-43b0-8c77-61e87de21d57",
+      "username": "laurateste357",
+      "full_name": "Laura Cristina Brito",
+      "email": "laura.teste.1792116909745@gmail.com",
+      "grade": "6_ano",
+      "avatar_url": "cadet_blue",
+      "account_status": "aprovada",
+      "role": "estudante",
+      "guardian_name": "Mae da Laura",
+      "guardian_phone": "(99) 99999-9999",
+      "guardian_cpf": null,
+      "agreed_terms": true,
+      "total_stars": 0,
+      "total_points": 0,
+      "study_streak_days": 0,
+      "created_at": "2026-10-16T02:15:09.977857+00:00",
+      "updated_at": "2026-10-16T02:15:09.977857+00:00"
+    },
+    {
+      "id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "username": "lauracristina",
+      "full_name": "LAURA CRISTINA BRITO",
+      "email": "lauracristina@estudante.cmt.br",
+      "grade": "6_ano",
+      "avatar_url": "cadet_blue",
+      "account_status": "aprovada",
+      "role": "estudante",
+      "guardian_name": "Responsável Laura",
+      "guardian_phone": "(99) 99113-6329",
+      "guardian_cpf": "",
+      "agreed_terms": true,
+      "total_stars": 0,
+      "total_points": 0,
+      "study_streak_days": 0,
+      "created_at": "2026-10-16T02:16:56.200111+00:00",
+      "updated_at": "2026-10-16T16:28:15.573Z"
     }
   ],
   "accessRequests": [
@@ -49,6 +87,32 @@
       "guardian_phone": "(99) 98888-7777",
       "requested_at": "2026-10-16T02:23:25.952Z",
       "status": "pendente"
+    },
+    {
+      "id": "57d3c241-5042-43eb-a6b5-bf602dfed3c0",
+      "user_id": "3b693e25-9a78-43b0-8c77-61e87de21d57",
+      "username": "laurateste357",
+      "grade": "6_ano",
+      "guardian_name": null,
+      "guardian_phone": null,
+      "requested_at": "2026-10-16T02:15:21.472705+00:00",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pendente",
+      "rejection_reason": null
+    },
+    {
+      "id": "013853bd-cd7a-49ee-ba7d-ecf9fb8aa6ed",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "username": "lauracristina",
+      "grade": "6_ano",
+      "guardian_name": "Responsável Laura",
+      "guardian_phone": "(99) 99113-6329",
+      "requested_at": "2026-10-16T02:16:56.745+00:00",
+      "reviewed_at": "2026-10-16T16:28:15.573Z",
+      "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
+      "status": "aprovado",
+      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
     }
   ],
   "credentials": [
@@ -70,6 +134,19 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "aud-1792168095573",
+      "admin_id": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
+      "admin_username": "diretoria_cmt",
+      "action": "ALTERACAO_STATUS_CONTA",
+      "target_entity": "USER_PROFILE",
+      "target_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "details": {
+        "novo_status": "aprovada",
+        "motivo": "Matrícula conferida e aprovada pela Diretoria"
+      },
+      "created_at": "2026-10-16T16:28:15.573Z"
+    },
     {
       "id": "aud-1792117405952",
       "admin_id": "sistema",
