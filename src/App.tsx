@@ -156,13 +156,30 @@ function MainApp() {
     const qAtt = await db.getUserQuizAttempts(userId);
     const notifs = await db.getUserNotifications(userId);
     const reqs = await db.getAccessRequests();
+    const profiles = await db.getAllProfiles();
+
+    // Contagem infalível de solicitações pendentes para a badge do Superusuário
+    const pendingKeys = new Set<string>();
+    for (const r of reqs) {
+      if (r.status === 'pendente') {
+        const u = profiles.find((p) => p.id === r.user_id || p.username.toLowerCase() === r.username.toLowerCase());
+        if (!u || u.account_status === 'pendente') {
+          pendingKeys.add(r.user_id || r.username.toLowerCase());
+        }
+      }
+    }
+    for (const p of profiles) {
+      if (p.role !== 'superusuario' && p.account_status === 'pendente') {
+        pendingKeys.add(p.id);
+      }
+    }
 
     setStudyPreferences(prefs);
     setLastStudiedProgress(last);
     setUserProgressList(allProg);
     setQuizAttempts(qAtt);
     setUnreadNotificationsCount(notifs.filter((n) => !n.is_read).length);
-    setPendingRequestsCount(reqs.filter((r) => r.status === 'pendente').length);
+    setPendingRequestsCount(pendingKeys.size);
   };
 
   const handleSwitchUser = async (userId: string) => {
@@ -190,10 +207,30 @@ function MainApp() {
     setCurrentTab('questionarios');
   };
 
+  // Helper de segurança absoluta: Superusuário NUNCA pode ser bloqueado ou ficar pendente
+  const isSuperAdminAccount = (user: UserProfile | null): boolean => {
+    if (!user) return false;
+    return (
+      user.role === 'superusuario' ||
+      user.id === 'super-admin-001' ||
+      user.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+      user.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
+      user.username?.toLowerCase() === 'diretoria_cmt'
+    );
+  };
+
+  // Garante status ativo se for conta de superusuário
+  if (currentUser && isSuperAdminAccount(currentUser)) {
+    if (currentUser.account_status !== 'aprovada' || currentUser.role !== 'superusuario') {
+      currentUser.account_status = 'aprovada';
+      currentUser.role = 'superusuario';
+    }
+  }
+
   // -------------------------------------------------------------
   // CONDITIONAL RENDERING: PENDING OR SUSPENDED ACCOUNTS
   // -------------------------------------------------------------
-  if (currentUser && currentUser.account_status === 'pendente') {
+  if (currentUser && !isSuperAdminAccount(currentUser) && currentUser.account_status === 'pendente') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
         <Navbar
@@ -244,7 +281,7 @@ function MainApp() {
     );
   }
 
-  if (currentUser && (currentUser.account_status === 'suspensa' || currentUser.account_status === 'bloqueada')) {
+  if (currentUser && !isSuperAdminAccount(currentUser) && (currentUser.account_status === 'suspensa' || currentUser.account_status === 'bloqueada')) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
         <Navbar
@@ -266,14 +303,34 @@ function MainApp() {
             <p className="text-xs text-slate-600 leading-relaxed">
               Sua conta foi suspensa pela coordenação. Entre em contato com a secretaria do Colégio Militar Tiradentes XVII pelo telefone (99) 99113-6329.
             </p>
-            <button
-              onClick={handleLogout}
-              className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
-            >
-              Encerrar Sessão
-            </button>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={handleLogout}
+                className="w-full px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Encerrar Sessão
+              </button>
+              <button
+                onClick={() => handleOpenLogin('pixmercadopagosas@gmail.com')}
+                className="w-full px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-xl text-xs font-bold border border-red-200 transition-colors cursor-pointer"
+              >
+                Sou o Superusuário da Diretoria (Acessar Painel)
+              </button>
+            </div>
           </div>
         </div>
+        <LoginModal
+          isOpen={loginModalOpen}
+          initialIdentifier={loginInitialIdentifier}
+          onClose={() => setLoginModalOpen(false)}
+          onLoginSuccess={(u) => {
+            handleLoginSuccess(u);
+          }}
+          onOpenRegister={() => {
+            setLoginModalOpen(false);
+            setRegisterModalOpen(true);
+          }}
+        />
       </div>
     );
   }

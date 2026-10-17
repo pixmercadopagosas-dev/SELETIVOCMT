@@ -237,13 +237,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   });
 
-  // Combina solicitações com qualquer perfil que esteja com status 'pendente'
+  // Combina solicitações com qualquer perfil que esteja com status 'pendente' de forma infalível
   const pendingRequests = React.useMemo(() => {
-    const list = [...requests.filter((r) => r.status === 'pendente')];
+    const list: AccessRequest[] = [];
+    const seen = new Set<string>();
+
+    // 1. Processa solicitações de acesso da tabela oficial
+    for (const r of requests) {
+      if (r.status === 'pendente') {
+        const u = allUsers.find(
+          (user) => user.id === r.user_id || (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase())
+        );
+        // Se o perfil já estiver homologado/aprovado ou bloqueado no banco, não exibe como pendente
+        if (u && (u.account_status === 'aprovada' || u.account_status === 'bloqueada')) {
+          continue;
+        }
+        list.push(r);
+        if (r.user_id) seen.add(r.user_id);
+        if (r.username) seen.add(r.username.toLowerCase());
+      }
+    }
+
+    // 2. Adiciona qualquer estudante cadastrado com status 'pendente' que ainda não tenha entrado na lista
     for (const u of allUsers) {
+      if (u.role === 'superusuario') continue;
       if (u.account_status === 'pendente') {
-        const already = list.some((r) => r.user_id === u.id || r.username.toLowerCase() === u.username.toLowerCase());
-        if (!already) {
+        const isSeen =
+          seen.has(u.id) ||
+          seen.has(u.username.toLowerCase()) ||
+          list.some(
+            (r) =>
+              r.user_id === u.id ||
+              (r.username && u.username && r.username.toLowerCase() === u.username.toLowerCase())
+          );
+
+        if (!isSeen) {
           list.push({
             id: `req-${u.id}`,
             user_id: u.id,
@@ -254,9 +282,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             requested_at: u.created_at || new Date().toISOString(),
             status: 'pendente',
           });
+          seen.add(u.id);
+          seen.add(u.username.toLowerCase());
         }
       }
     }
+
     return list;
   }, [requests, allUsers]);
 
@@ -418,44 +449,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {pendingRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900">@{req.username}</span>
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-900 rounded font-bold text-[10px]">
-                        {req.grade === '6_ano' ? 'Candidato ao 6º Ano' : 'Candidato ao 7º Ano'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600">
-                      Responsável Legal: <strong>{req.guardian_name || 'Não informado'}</strong> • Fone: {req.guardian_phone || 'Não informado'}
-                    </p>
-                    <span className="text-[10px] text-slate-400">
-                      Cadastrado em: {new Date(req.requested_at).toLocaleString('pt-BR')}
-                    </span>
-                  </div>
+              {pendingRequests.map((req) => {
+                const matchedUser = allUsers.find(
+                  (u) =>
+                    u.id === req.user_id ||
+                    (u.username && req.username && u.username.toLowerCase() === req.username.toLowerCase())
+                );
+                const candidateFullName = matchedUser?.full_name || req.username;
+                const candidateEmail = matchedUser?.email || `${req.username}@estudante.cmt.br`;
+                const targetActionId = matchedUser?.id || req.user_id || req.username;
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => handleApprove(req.user_id)}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Aprovar Acesso</span>
-                    </button>
-                    <button
-                      onClick={() => handleReject(req.user_id)}
-                      className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      <span>Recusar</span>
-                    </button>
+                return (
+                  <div
+                    key={req.id}
+                    className="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/60 p-4 rounded-xl border border-slate-100 mb-2"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-extrabold text-slate-900">
+                          {candidateFullName}
+                        </span>
+                        <span className="text-xs text-slate-500 font-mono">
+                          @{req.username}
+                        </span>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-900 rounded-md font-bold text-[10px]">
+                          {req.grade === '6_ano' ? 'Candidato ao 6º Ano' : 'Candidato ao 7º Ano'}
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md font-bold text-[10px] animate-pulse">
+                          Aguardando Liberação
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-600">
+                        E-mail: <strong className="text-slate-800">{candidateEmail}</strong> • Responsável Legal: <strong className="text-slate-800">{req.guardian_name || matchedUser?.guardian_name || 'Não informado'}</strong>
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+                        <span>
+                          Fone/WhatsApp: <strong className="text-slate-700">{req.guardian_phone || matchedUser?.guardian_phone || 'Não informado'}</strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Solicitado em: {new Date(req.requested_at).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                      <button
+                        onClick={() => handleApprove(targetActionId)}
+                        className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Homologar cadastro e liberar acesso imediato do estudante"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Aprovar Acesso</span>
+                      </button>
+                      <button
+                        onClick={() => handleReject(targetActionId)}
+                        className="px-4 py-2.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Recusar solicitação de acesso"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Recusar</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

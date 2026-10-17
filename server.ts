@@ -547,31 +547,67 @@ app.get('/api/db/state', async (req, res) => {
         }
       }
 
-      // Regra garantida: Qualquer perfil com status 'pendente' deve constar nas solicitações
-      for (const p of db.profiles) {
-        if (p.account_status === 'pendente') {
-          const exists = db.accessRequests.some(
-            (r: any) => r.user_id === p.id || r.username.toLowerCase() === p.username.toLowerCase()
-          );
-          if (!exists) {
-            db.accessRequests.unshift({
-              id: `req-${p.id}`,
-              user_id: p.id,
-              username: p.username,
-              grade: p.grade,
-              guardian_name: p.guardian_name || 'Responsável Legal',
-              guardian_phone: p.guardian_phone || '',
-              requested_at: p.created_at || new Date().toISOString(),
-              status: 'pendente',
-            });
-          }
-        }
-      }
-
       saveServerDb(db);
     } catch (err) {
       console.warn('Erro ao sincronizar com Supabase em /api/db/state:', err);
     }
+  }
+
+  // REGRA MESTRA GARANTIDA (Executada SEMPRE, mesmo sem Supabase):
+  // 1. Todo perfil pendente DEVE ter uma solicitação pendente visível para o Superusuário
+  let dbChanged = false;
+  for (const p of db.profiles) {
+    if (p.role === 'superusuario' || p.id === 'super-admin-001' || p.username === 'diretoria_cmt') {
+      p.role = 'superusuario';
+      p.account_status = 'aprovada';
+      continue;
+    }
+
+    if (p.account_status === 'pendente') {
+      const exists = db.accessRequests.some(
+        (r: any) =>
+          r.user_id === p.id ||
+          (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())
+      );
+      if (!exists) {
+        db.accessRequests.unshift({
+          id: `req-${p.id}`,
+          user_id: p.id,
+          username: p.username,
+          grade: p.grade || '6_ano',
+          guardian_name: p.guardian_name || 'Responsável Legal',
+          guardian_phone: p.guardian_phone || '',
+          requested_at: p.created_at || new Date().toISOString(),
+          status: 'pendente',
+        });
+        dbChanged = true;
+      }
+    }
+  }
+
+  // 2. Alinha solicitações com o status do perfil
+  for (const r of db.accessRequests) {
+    const prof = db.profiles.find(
+      (p: any) =>
+        p.id === r.user_id ||
+        (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase())
+    );
+    if (prof) {
+      if (prof.account_status === 'aprovada' && r.status === 'pendente') {
+        r.status = 'aprovado';
+        dbChanged = true;
+      } else if (prof.account_status === 'bloqueada' && r.status === 'pendente') {
+        r.status = 'recusado';
+        dbChanged = true;
+      } else if (prof.account_status === 'pendente' && r.status !== 'pendente') {
+        r.status = 'pendente';
+        dbChanged = true;
+      }
+    }
+  }
+
+  if (dbChanged) {
+    saveServerDb(db);
   }
 
   res.json({
@@ -727,18 +763,40 @@ app.post('/api/db/approve', async (req, res) => {
     const { adminId, targetUserId, newStatus, reason } = req.body;
     const db = loadServerDb();
 
-    const targetIdx = db.profiles.findIndex((p: any) => p.id === targetUserId);
+    const cleanTarget = String(targetUserId).trim();
+    const cleanLower = cleanTarget.toLowerCase();
+    const cleanWithoutReq = cleanTarget.replace('req-', '');
+
+    let targetIdx = db.profiles.findIndex(
+      (p: any) =>
+        p.id === cleanTarget ||
+        p.id === cleanWithoutReq ||
+        (p.username && p.username.toLowerCase() === cleanLower) ||
+        (p.email && p.email.toLowerCase() === cleanLower)
+    );
+
     if (targetIdx !== -1) {
       db.profiles[targetIdx].account_status = newStatus;
       db.profiles[targetIdx].updated_at = new Date().toISOString();
     }
 
-    const reqItem = db.accessRequests.find((r: any) => r.user_id === targetUserId);
-    if (reqItem) {
-      reqItem.status = newStatus === 'aprovada' ? 'aprovado' : 'recusado';
-      reqItem.reviewed_at = new Date().toISOString();
-      reqItem.reviewed_by = adminId || 'super-admin-001';
-      reqItem.rejection_reason = reason;
+    const matchedUserId = targetIdx !== -1 ? db.profiles[targetIdx].id : cleanWithoutReq;
+    const matchedUsername = targetIdx !== -1 ? db.profiles[targetIdx].username.toLowerCase() : cleanLower;
+
+    let matchedReqCount = 0;
+    for (const r of db.accessRequests) {
+      if (
+        r.id === cleanTarget ||
+        r.user_id === cleanTarget ||
+        r.user_id === matchedUserId ||
+        (r.username && r.username.toLowerCase() === matchedUsername)
+      ) {
+        r.status = newStatus === 'aprovada' ? 'aprovado' : 'recusado';
+        r.reviewed_at = new Date().toISOString();
+        r.reviewed_by = adminId || 'super-admin-001';
+        r.rejection_reason = reason;
+        matchedReqCount++;
+      }
     }
 
     db.auditLogs.unshift({
@@ -779,7 +837,7 @@ app.post('/api/db/approve', async (req, res) => {
     return res.json({
       success: true,
       user: targetIdx !== -1 ? db.profiles[targetIdx] : null,
-      request: reqItem,
+      matchedRequests: matchedReqCount,
     });
   } catch (err: any) {
     console.error('Erro na rota /api/db/approve:', err);

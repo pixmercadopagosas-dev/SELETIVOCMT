@@ -191,7 +191,23 @@ class DatabaseEngine {
         if (data && data.success) {
           if (Array.isArray(data.profiles) && data.profiles.length > 0) {
             for (const sp of data.profiles) {
-              const idx = this.profiles.findIndex((p) => p.id === sp.id || p.username === sp.username);
+              const isSuper =
+                sp.id === ROOT_SUPERADMIN.id ||
+                sp.id === 'super-admin-001' ||
+                sp.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+                sp.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
+                sp.username?.toLowerCase() === 'diretoria_cmt';
+
+              if (isSuper) {
+                sp.role = 'superusuario';
+                sp.account_status = 'aprovada';
+              }
+
+              const idx = this.profiles.findIndex(
+                (p) =>
+                  p.id === sp.id ||
+                  (p.username && sp.username && p.username.toLowerCase() === sp.username.toLowerCase())
+              );
               if (idx >= 0) {
                 this.profiles[idx] = { ...this.profiles[idx], ...sp };
               } else {
@@ -203,7 +219,12 @@ class DatabaseEngine {
 
           if (Array.isArray(data.accessRequests) && data.accessRequests.length > 0) {
             for (const req of data.accessRequests) {
-              const idx = this.accessRequests.findIndex((r) => r.id === req.id || r.user_id === req.user_id);
+              const idx = this.accessRequests.findIndex(
+                (r) =>
+                  r.id === req.id ||
+                  r.user_id === req.user_id ||
+                  (r.username && req.username && r.username.toLowerCase() === req.username.toLowerCase())
+              );
               if (idx >= 0) {
                 this.accessRequests[idx] = { ...this.accessRequests[idx], ...req };
               } else {
@@ -215,7 +236,11 @@ class DatabaseEngine {
 
           if (Array.isArray(data.credentials) && data.credentials.length > 0) {
             for (const cr of data.credentials) {
-              const idx = this.credentials.findIndex((c) => c.userId === cr.userId || c.username === cr.username);
+              const idx = this.credentials.findIndex(
+                (c) =>
+                  c.userId === cr.userId ||
+                  (c.username && cr.username && c.username.toLowerCase() === cr.username.toLowerCase())
+              );
               if (idx >= 0) {
                 this.credentials[idx] = { ...this.credentials[idx], ...cr };
               } else {
@@ -456,6 +481,7 @@ class DatabaseEngine {
     const isSuperId =
       userId === ROOT_SUPERADMIN.id ||
       userId === 'super-admin-001' ||
+      userId === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
       userId?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
       userId?.toLowerCase() === 'diretoria_cmt';
 
@@ -464,6 +490,7 @@ class DatabaseEngine {
         (p) =>
           p.id === ROOT_SUPERADMIN.id ||
           p.id === 'super-admin-001' ||
+          p.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
           p.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
           p.username?.toLowerCase() === 'diretoria_cmt'
       );
