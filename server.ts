@@ -845,7 +845,85 @@ app.post('/api/db/approve', async (req, res) => {
   }
 });
 
-// 4.4 Sincronização bidirecional entre cliente e servidor
+// 4.4 Exclusão de solicitação pelo Superusuário (aceitar e apagar sempre que quiser)
+app.post('/api/db/delete-request', (req, res) => {
+  try {
+    const { adminId, targetId, deleteProfile = true } = req.body;
+    const db = loadServerDb();
+
+    const cleanTarget = String(targetId || '').trim();
+    const cleanLower = cleanTarget.toLowerCase();
+    const cleanWithoutReq = cleanTarget.replace('req-', '');
+
+    // Remove das solicitações de acesso
+    const initialReqCount = db.accessRequests.length;
+    db.accessRequests = db.accessRequests.filter(
+      (r: any) =>
+        r.id !== cleanTarget &&
+        r.user_id !== cleanTarget &&
+        r.user_id !== cleanWithoutReq &&
+        (!r.username || r.username.toLowerCase() !== cleanLower)
+    );
+
+    // Se deleteProfile = true, remove também o perfil e credenciais (caso não seja superusuário)
+    if (deleteProfile) {
+      db.profiles = db.profiles.filter(
+        (p: any) =>
+          p.id !== cleanTarget &&
+          p.id !== cleanWithoutReq &&
+          (!p.username || p.username.toLowerCase() !== cleanLower) &&
+          p.role !== 'superusuario' &&
+          p.id !== 'super-admin-001'
+      );
+      db.credentials = db.credentials.filter(
+        (c: any) =>
+          c.userId !== cleanTarget &&
+          c.userId !== cleanWithoutReq &&
+          (!c.username || c.username.toLowerCase() !== cleanLower) &&
+          c.userId !== 'super-admin-001'
+      );
+    } else {
+      // Caso contrário, marca o perfil como 'bloqueada' para não regerar pendência
+      const profIdx = db.profiles.findIndex(
+        (p: any) =>
+          p.id === cleanTarget ||
+          p.id === cleanWithoutReq ||
+          (p.username && p.username.toLowerCase() === cleanLower)
+      );
+      if (profIdx !== -1 && db.profiles[profIdx].role !== 'superusuario') {
+        db.profiles[profIdx].account_status = 'bloqueada';
+        db.profiles[profIdx].updated_at = new Date().toISOString();
+      }
+    }
+
+    db.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      admin_id: adminId || 'super-admin-001',
+      admin_username: 'diretoria_cmt',
+      action: 'EXCLUSAO_SOLICITACAO_ACESSO',
+      target_entity: 'ACCESS_REQUEST',
+      target_id: cleanTarget,
+      details: {
+        removidas: initialReqCount - db.accessRequests.length,
+        perfilExcluido: deleteProfile,
+        data: new Date().toISOString(),
+      },
+      created_at: new Date().toISOString(),
+    });
+
+    saveServerDb(db);
+
+    return res.json({
+      success: true,
+      removed: initialReqCount - db.accessRequests.length,
+    });
+  } catch (err: any) {
+    console.error('Erro na rota /api/db/delete-request:', err);
+    return res.status(500).json({ error: err.message || 'Erro ao excluir solicitação' });
+  }
+});
+
+// 4.5 Sincronização bidirecional entre cliente e servidor
 app.post('/api/db/sync', (req, res) => {
   try {
     const { profiles = [], accessRequests = [] } = req.body;

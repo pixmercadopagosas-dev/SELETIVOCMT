@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Download,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { db } from '../../lib/databaseEngine';
 import { testSupabaseConnection, isSupabaseConfigured, SupabaseConfigStatus } from '../../lib/supabase';
@@ -111,16 +112,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
+    const cleanTarget = String(userId || '').trim().toLowerCase();
+    const cleanWithoutReq = cleanTarget.replace('req-', '');
+
+    // 1. Atualização Otimista Imediata: a solicitação sai da lista no mesmo instante
+    setAllUsers((prev) =>
+      prev.map((u) => {
+        if (
+          u.id.toLowerCase() === cleanTarget ||
+          u.id.toLowerCase() === cleanWithoutReq ||
+          u.username.toLowerCase() === cleanTarget ||
+          u.username.toLowerCase() === cleanWithoutReq
+        ) {
+          return { ...u, account_status: 'aprovada' };
+        }
+        return u;
+      })
+    );
+
+    setRequests((prev) =>
+      prev.map((r) => {
+        if (
+          r.id.toLowerCase() === cleanTarget ||
+          r.user_id.toLowerCase() === cleanTarget ||
+          r.user_id.toLowerCase() === cleanWithoutReq ||
+          r.username.toLowerCase() === cleanTarget ||
+          r.username.toLowerCase() === cleanWithoutReq
+        ) {
+          return { ...r, status: 'aprovado' };
+        }
+        return r;
+      })
+    );
+
     try {
       const adminId = currentAdmin?.id || 'super-admin-001';
       await db.updateAccountStatus(adminId, userId, 'aprovada', 'Matrícula conferida e aprovada pela Diretoria');
-      setActionSuccess(`Conta do estudante aprovada com sucesso!`);
-      await loadAdminData();
+      setActionSuccess(`Conta do estudante aprovada com sucesso! Acesso liberado.`);
+      await loadAdminData(true);
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
       setActionError(err.message || 'Erro ao aprovar cadastro.');
       setTimeout(() => setActionError(null), 5000);
+      await loadAdminData(true);
     }
   };
 
@@ -129,16 +164,95 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!reason) return;
 
     setActionError(null);
+    const cleanTarget = String(userId || '').trim().toLowerCase();
+    const cleanWithoutReq = cleanTarget.replace('req-', '');
+
+    // 1. Atualização Otimista Imediata
+    setAllUsers((prev) =>
+      prev.map((u) => {
+        if (
+          u.id.toLowerCase() === cleanTarget ||
+          u.id.toLowerCase() === cleanWithoutReq ||
+          u.username.toLowerCase() === cleanTarget ||
+          u.username.toLowerCase() === cleanWithoutReq
+        ) {
+          return { ...u, account_status: 'bloqueada' };
+        }
+        return u;
+      })
+    );
+
+    setRequests((prev) =>
+      prev.map((r) => {
+        if (
+          r.id.toLowerCase() === cleanTarget ||
+          r.user_id.toLowerCase() === cleanTarget ||
+          r.user_id.toLowerCase() === cleanWithoutReq ||
+          r.username.toLowerCase() === cleanTarget ||
+          r.username.toLowerCase() === cleanWithoutReq
+        ) {
+          return { ...r, status: 'recusado', rejection_reason: reason };
+        }
+        return r;
+      })
+    );
+
     try {
       const adminId = currentAdmin?.id || 'super-admin-001';
       await db.updateAccountStatus(adminId, userId, 'bloqueada', reason);
-      setActionSuccess(`Solicitação recusada.`);
-      await loadAdminData();
+      setActionSuccess(`Solicitação recusada com sucesso.`);
+      await loadAdminData(true);
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
       setActionError(err.message || 'Erro ao recusar cadastro.');
       setTimeout(() => setActionError(null), 5000);
+      await loadAdminData(true);
+    }
+  };
+
+  const handleDeleteRequest = async (targetId: string, username: string) => {
+    const confirmDelete = window.confirm(
+      `Deseja realmente APAGAR a solicitação de @${username} da lista?\n\nO Superusuário possui permissão total para apagar qualquer solicitação sempre que quiser.`
+    );
+    if (!confirmDelete) return;
+
+    setActionError(null);
+    const cleanTarget = String(targetId || '').trim().toLowerCase();
+    const cleanWithoutReq = cleanTarget.replace('req-', '');
+
+    // Remove imediatamente da visualização
+    setRequests((prev) =>
+      prev.filter(
+        (r) =>
+          r.id.toLowerCase() !== cleanTarget &&
+          r.user_id.toLowerCase() !== cleanTarget &&
+          r.user_id.toLowerCase() !== cleanWithoutReq &&
+          r.username.toLowerCase() !== cleanTarget &&
+          r.username.toLowerCase() !== cleanWithoutReq
+      )
+    );
+
+    setAllUsers((prev) =>
+      prev.filter(
+        (u) =>
+          u.id.toLowerCase() !== cleanTarget &&
+          u.id.toLowerCase() !== cleanWithoutReq &&
+          u.username.toLowerCase() !== cleanTarget &&
+          u.username.toLowerCase() !== cleanWithoutReq
+      )
+    );
+
+    try {
+      await db.deleteAccessRequest(targetId, true);
+      setActionSuccess(`Solicitação de @${username} apagada com sucesso pelo Superusuário!`);
+      await loadAdminData(true);
+      if (onRefreshData) onRefreshData();
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err: any) {
+      setActionError(err.message || 'Erro ao apagar solicitação.');
+      setTimeout(() => setActionError(null), 5000);
+      await loadAdminData(true);
     }
   };
 
@@ -495,7 +609,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
                       <button
                         onClick={() => handleApprove(targetActionId)}
                         className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
@@ -506,11 +620,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </button>
                       <button
                         onClick={() => handleReject(targetActionId)}
-                        className="px-4 py-2.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-amber-300"
                         title="Recusar solicitação de acesso"
                       >
                         <XCircle className="w-4 h-4" />
                         <span>Recusar</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRequest(targetActionId, req.username)}
+                        className="px-3.5 py-2.5 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-red-200 hover:border-red-600 shadow-xs"
+                        title="Apagar permanentemente a solicitação da lista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Apagar</span>
                       </button>
                     </div>
                   </div>
@@ -623,6 +745,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           }`}
                         >
                           {user.account_status === 'suspensa' ? 'Reativar' : 'Suspender'}
+                        </button>
+                      )}
+
+                      {user.role !== 'superusuario' && (
+                        <button
+                          onClick={() => handleDeleteRequest(user.id, user.username)}
+                          className="px-2 py-1 rounded-lg font-bold text-[11px] transition-colors bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 inline-flex items-center gap-0.5 border border-slate-200 hover:border-red-600 cursor-pointer"
+                          title="Apagar este cadastro do sistema permanentemente"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Apagar</span>
                         </button>
                       )}
                     </td>

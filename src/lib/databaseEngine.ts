@@ -1232,6 +1232,88 @@ class DatabaseEngine {
     return [...this.accessRequests];
   }
 
+  // -------------------------------------------------------------
+  // EXCLUSÃO DE SOLICITAÇÃO PELO SUPERUSUÁRIO (ACEITAR E APAGAR SEMPRE QUE QUISER)
+  // -------------------------------------------------------------
+  async deleteAccessRequest(requestIdOrUserId: string, deleteProfile = true): Promise<boolean> {
+    const clean = (requestIdOrUserId || '').trim();
+    const cleanLower = clean.toLowerCase();
+    const cleanWithoutReq = clean.replace('req-', '');
+
+    // 1. Remove das solicitações em memória
+    this.accessRequests = this.accessRequests.filter(
+      (r) =>
+        r.id !== clean &&
+        r.user_id !== clean &&
+        r.user_id !== cleanWithoutReq &&
+        (!r.username || r.username.toLowerCase() !== cleanLower)
+    );
+    safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+
+    // 2. Se deleteProfile = true, remove também o perfil e credenciais do banco
+    if (deleteProfile) {
+      this.profiles = this.profiles.filter(
+        (p) =>
+          p.id !== clean &&
+          p.id !== cleanWithoutReq &&
+          (!p.username || p.username.toLowerCase() !== cleanLower) &&
+          p.role !== 'superusuario' &&
+          p.id !== 'super-admin-001'
+      );
+      safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+
+      this.credentials = this.credentials.filter(
+        (c) =>
+          c.userId !== clean &&
+          c.userId !== cleanWithoutReq &&
+          (!c.username || c.username.toLowerCase() !== cleanLower) &&
+          c.userId !== 'super-admin-001'
+      );
+      this.persistCredentials();
+    } else {
+      // Caso não delete o perfil, marca como bloqueada para não regerar pendência
+      const profIdx = this.profiles.findIndex(
+        (p) =>
+          p.id === clean ||
+          p.id === cleanWithoutReq ||
+          (p.username && p.username.toLowerCase() === cleanLower)
+      );
+      if (profIdx !== -1 && this.profiles[profIdx].role !== 'superusuario') {
+        this.profiles[profIdx].account_status = 'bloqueada';
+        safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
+      }
+    }
+
+    // 3. Registra auditoria oficial
+    this.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      admin_id: ROOT_SUPERADMIN.id,
+      admin_username: 'diretoria_cmt',
+      action: 'EXCLUSAO_SOLICITACAO_ACESSO',
+      target_entity: 'ACCESS_REQUEST',
+      target_id: clean,
+      details: { deleteProfile, data: new Date().toISOString() },
+      created_at: new Date().toISOString(),
+    });
+    safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
+
+    // 4. Sincroniza com servidor central
+    try {
+      await fetch('/api/db/delete-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId: ROOT_SUPERADMIN.id,
+          targetId: clean,
+          deleteProfile,
+        }),
+      });
+    } catch {}
+
+    this.broadcastChange('REQUEST_DELETED', { targetId: clean, deleteProfile });
+    return true;
+  }
+
   async getAuditLogs(): Promise<AuditLog[]> {
     return [...this.auditLogs];
   }
