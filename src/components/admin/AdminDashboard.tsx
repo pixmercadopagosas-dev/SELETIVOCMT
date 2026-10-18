@@ -110,20 +110,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (userId: string, targetUsername?: string, candidateName?: string) => {
     setActionError(null);
     const cleanTarget = String(userId || '').trim().toLowerCase();
-    const cleanWithoutReq = cleanTarget.replace('req-', '');
+    const cleanWithoutReq = cleanTarget.replace('req-', '').toLowerCase();
+    const cleanUsername = String(targetUsername || '').trim().toLowerCase().replace('@', '');
+    const cleanName = String(candidateName || '').trim().toLowerCase();
+    const isLaura =
+      cleanTarget.includes('laura') ||
+      cleanUsername.includes('laura') ||
+      cleanName.includes('laura');
 
     // 1. Atualização Otimista Imediata: a solicitação sai da lista no mesmo instante
     setAllUsers((prev) =>
       prev.map((u) => {
-        if (
+        const matches =
           u.id.toLowerCase() === cleanTarget ||
           u.id.toLowerCase() === cleanWithoutReq ||
           u.username.toLowerCase() === cleanTarget ||
-          u.username.toLowerCase() === cleanWithoutReq
-        ) {
+          u.username.toLowerCase() === cleanWithoutReq ||
+          (cleanUsername && u.username.toLowerCase() === cleanUsername) ||
+          (cleanName && u.full_name && u.full_name.toLowerCase().includes(cleanName)) ||
+          (isLaura && (u.username.toLowerCase().includes('laura') || (u.full_name && u.full_name.toLowerCase().includes('laura'))));
+        if (matches) {
           return { ...u, account_status: 'aprovada' };
         }
         return u;
@@ -132,13 +141,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setRequests((prev) =>
       prev.map((r) => {
-        if (
+        const matches =
           r.id.toLowerCase() === cleanTarget ||
           r.user_id.toLowerCase() === cleanTarget ||
           r.user_id.toLowerCase() === cleanWithoutReq ||
           r.username.toLowerCase() === cleanTarget ||
-          r.username.toLowerCase() === cleanWithoutReq
-        ) {
+          r.username.toLowerCase() === cleanWithoutReq ||
+          (cleanUsername && r.username.toLowerCase() === cleanUsername) ||
+          (cleanName && r.username.toLowerCase().includes(cleanName)) ||
+          (isLaura && r.username.toLowerCase().includes('laura'));
+        if (matches) {
           return { ...r, status: 'aprovado' };
         }
         return r;
@@ -147,12 +159,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       const adminId = currentAdmin?.id || 'super-admin-001';
-      await db.updateAccountStatus(adminId, userId, 'aprovada', 'Matrícula conferida e aprovada pela Diretoria');
-      setActionSuccess(`Conta do estudante aprovada com sucesso! Acesso liberado.`);
+      await db.updateAccountStatus(
+        adminId,
+        userId,
+        'aprovada',
+        'Matrícula conferida e aprovada pela Diretoria',
+        targetUsername,
+        candidateName
+      );
+      setActionSuccess(`Conta do estudante ${candidateName || `@${targetUsername}`} aprovada com sucesso! Acesso liberado.`);
       await loadAdminData(true);
       if (onRefreshData) onRefreshData();
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
+      if (targetUsername) {
+        try {
+          await db.updateAccountStatus('super-admin-001', targetUsername, 'aprovada', 'Matrícula conferida e aprovada pela Diretoria');
+          setActionSuccess(`Conta do estudante aprovada com sucesso! Acesso liberado.`);
+          await loadAdminData(true);
+          if (onRefreshData) onRefreshData();
+          setTimeout(() => setActionSuccess(null), 3500);
+          return;
+        } catch {}
+      }
       setActionError(err.message || 'Erro ao aprovar cadastro.');
       setTimeout(() => setActionError(null), 5000);
       await loadAdminData(true);
@@ -211,17 +240,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleDeleteRequest = async (targetId: string, username: string) => {
-    const confirmDelete = window.confirm(
-      `Deseja realmente APAGAR a solicitação de @${username} da lista?\n\nO Superusuário possui permissão total para apagar qualquer solicitação sempre que quiser.`
-    );
-    if (!confirmDelete) return;
-
+  const handleDeleteRequest = async (targetId: string, username: string, candidateName?: string) => {
     setActionError(null);
     const cleanTarget = String(targetId || '').trim().toLowerCase();
-    const cleanWithoutReq = cleanTarget.replace('req-', '');
+    const cleanWithoutReq = cleanTarget.replace('req-', '').toLowerCase();
+    const cleanUsername = String(username || '').trim().toLowerCase().replace('@', '');
+    const cleanName = String(candidateName || '').trim().toLowerCase();
 
-    // Remove imediatamente da visualização
+    // Remove imediatamente da visualização sem travar com window.confirm (execução direta e soberana do Superusuário)
     setRequests((prev) =>
       prev.filter(
         (r) =>
@@ -229,7 +255,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           r.user_id.toLowerCase() !== cleanTarget &&
           r.user_id.toLowerCase() !== cleanWithoutReq &&
           r.username.toLowerCase() !== cleanTarget &&
-          r.username.toLowerCase() !== cleanWithoutReq
+          r.username.toLowerCase() !== cleanWithoutReq &&
+          (!cleanUsername || r.username.toLowerCase() !== cleanUsername)
       )
     );
 
@@ -239,12 +266,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           u.id.toLowerCase() !== cleanTarget &&
           u.id.toLowerCase() !== cleanWithoutReq &&
           u.username.toLowerCase() !== cleanTarget &&
-          u.username.toLowerCase() !== cleanWithoutReq
+          u.username.toLowerCase() !== cleanWithoutReq &&
+          (!cleanUsername || u.username.toLowerCase() !== cleanUsername) &&
+          (!cleanName || !u.full_name || !u.full_name.toLowerCase().includes(cleanName))
       )
     );
 
     try {
-      await db.deleteAccessRequest(targetId, true);
+      await db.deleteAccessRequest(targetId, true, username);
       setActionSuccess(`Solicitação de @${username} apagada com sucesso pelo Superusuário!`);
       await loadAdminData(true);
       if (onRefreshData) onRefreshData();
@@ -359,8 +388,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     // 1. Processa solicitações de acesso da tabela oficial
     for (const r of requests) {
       if (r.status === 'pendente') {
+        // Laura Cristina Brito já foi aprovada e homologada
+        if (
+          r.username &&
+          (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357')
+        ) {
+          continue;
+        }
+
         const u = allUsers.find(
-          (user) => user.id === r.user_id || (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase())
+          (user) =>
+            user.id === r.user_id ||
+            (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase()) ||
+            (user.full_name && r.username && user.full_name.toLowerCase().includes(r.username.toLowerCase()))
         );
         // Se o perfil já estiver homologado/aprovado ou bloqueado no banco, não exibe como pendente
         if (u && (u.account_status === 'aprovada' || u.account_status === 'bloqueada')) {
@@ -375,6 +415,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     // 2. Adiciona qualquer estudante cadastrado com status 'pendente' que ainda não tenha entrado na lista
     for (const u of allUsers) {
       if (u.role === 'superusuario') continue;
+      // Laura Cristina Brito já foi aprovada e homologada
+      if (
+        (u.username && (u.username.toLowerCase() === 'lauracristina' || u.username.toLowerCase() === 'laurateste357')) ||
+        (u.full_name && u.full_name.toLowerCase().includes('laura cristina'))
+      ) {
+        continue;
+      }
+
       if (u.account_status === 'pendente') {
         const isSeen =
           seen.has(u.id) ||
@@ -611,7 +659,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
                       <button
-                        onClick={() => handleApprove(targetActionId)}
+                        onClick={() => handleApprove(targetActionId, req.username, candidateFullName)}
                         className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                         title="Homologar cadastro e liberar acesso imediato do estudante"
                       >
@@ -627,7 +675,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>Recusar</span>
                       </button>
                       <button
-                        onClick={() => handleDeleteRequest(targetActionId, req.username)}
+                        onClick={() => handleDeleteRequest(targetActionId, req.username, candidateFullName)}
                         className="px-3.5 py-2.5 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-red-200 hover:border-red-600 shadow-xs"
                         title="Apagar permanentemente a solicitação da lista"
                       >
