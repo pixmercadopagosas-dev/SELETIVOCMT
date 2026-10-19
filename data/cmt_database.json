@@ -113,6 +113,25 @@
       "study_streak_days": 0,
       "created_at": "2026-10-18T02:23:06.5696+00:00",
       "updated_at": "2026-10-19T02:43:19.37+00:00"
+    },
+    {
+      "id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "username": "bruna",
+      "full_name": "Bruna Ferreira",
+      "email": "bruna@estudante.cmt.br",
+      "grade": "6_ano",
+      "avatar_url": "cadet_blue",
+      "account_status": "pendente",
+      "role": "estudante",
+      "guardian_name": "Manoel Ferreira",
+      "guardian_phone": "(99) 98111-2233",
+      "guardian_cpf": "",
+      "agreed_terms": true,
+      "total_stars": 0,
+      "total_points": 0,
+      "study_streak_days": 0,
+      "created_at": "2026-10-19T03:32:18.755849+00:00",
+      "updated_at": "2026-10-19T03:32:18.755849+00:00"
     }
   ],
   "accessRequests": [
@@ -180,6 +199,19 @@
       "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
       "status": "aprovado",
       "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
+    },
+    {
+      "id": "cf718515-3e69-443b-9abf-d653664d9d7e",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "username": "bruna",
+      "grade": "6_ano",
+      "guardian_name": "Manoel Ferreira",
+      "guardian_phone": "(99) 98111-2233",
+      "requested_at": "2026-10-19T03:32:19.057+00:00",
+      "reviewed_at": null,
+      "reviewed_by": null,
+      "status": "pendente",
+      "rejection_reason": null
     }
   ],
   "credentials": [

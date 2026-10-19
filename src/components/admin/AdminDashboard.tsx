@@ -404,6 +404,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           continue;
         }
 
+        // Se o estudante já foi aprovado pelo Superusuário, não exibe como pendente
+        if (u && u.account_status === 'aprovada') {
+          continue;
+        }
+
         list.push(r);
         if (r.user_id) seen.add(r.user_id.toLowerCase());
         if (r.username) seen.add(r.username.toLowerCase());

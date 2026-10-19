@@ -538,7 +538,12 @@ app.get('/api/db/state', async (req, res) => {
       const { data: supaReqs } = await supabaseServerClient.from('access_requests').select('*');
       if (supaReqs && supaReqs.length > 0) {
         for (const sr of supaReqs) {
-          const idx = db.accessRequests.findIndex((r: any) => r.id === sr.id || r.user_id === sr.user_id);
+          const idx = db.accessRequests.findIndex(
+            (r: any) =>
+              r.id === sr.id ||
+              r.user_id === sr.user_id ||
+              (r.username && sr.username && r.username.toLowerCase() === sr.username.toLowerCase())
+          );
           if (idx >= 0) {
             db.accessRequests[idx] = { ...db.accessRequests[idx], ...sr };
           } else {
@@ -576,14 +581,15 @@ app.get('/api/db/state', async (req, res) => {
     }
 
     if (p.account_status === 'pendente') {
-      const exists = db.accessRequests.some(
+      const pendingReq = db.accessRequests.find(
         (r: any) =>
-          r.user_id === p.id ||
-          (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())
+          (r.user_id === p.id ||
+          (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())) &&
+          r.status === 'pendente'
       );
-      if (!exists) {
+      if (!pendingReq) {
         db.accessRequests.unshift({
-          id: `req-${p.id}`,
+          id: crypto.randomUUID ? crypto.randomUUID() : `req-${p.id}`,
           user_id: p.id,
           username: p.username,
           grade: p.grade || '6_ano',
@@ -622,6 +628,12 @@ app.get('/api/db/state', async (req, res) => {
         if (prof.account_status !== 'aprovada') {
           prof.account_status = 'aprovada';
           prof.updated_at = new Date().toISOString();
+          dbChanged = true;
+        }
+      } else if (prof.account_status === 'pendente') {
+        // Aluno pendente precisa de homologação do Superusuário
+        if (r.status !== 'pendente' && r.status !== 'recusado') {
+          r.status = 'pendente';
           dbChanged = true;
         }
       } else if (r.status === 'aprovado' && prof.account_status !== 'aprovada') {
@@ -667,7 +679,7 @@ app.post('/api/db/register', async (req, res) => {
       return res.status(400).json({ error: `O nome de usuário "${data.username}" já está cadastrado.` });
     }
 
-    let assignedUserId = data.newUserId || `std-${Date.now()}`;
+    let assignedUserId = data.newUserId && !data.newUserId.startsWith('std-') ? data.newUserId : (crypto.randomUUID ? crypto.randomUUID() : `std-${Date.now()}`);
     const studentEmail = data.email && data.email.includes('@')
       ? data.email.trim()
       : `${cleanUsername}@estudante.cmt.br`;
@@ -690,6 +702,22 @@ app.post('/api/db/register', async (req, res) => {
 
         if (authUser?.user?.id) {
           assignedUserId = authUser.user.id;
+        } else {
+          try {
+            const { data: userList } = await supabaseServerClient.auth.admin.listUsers();
+            const existingAuth = userList?.users?.find(
+              (u: any) => u.email === studentEmail || u.user_metadata?.username === cleanUsername
+            );
+            if (existingAuth) {
+              assignedUserId = existingAuth.id;
+            } else if (!assignedUserId || assignedUserId.startsWith('std-')) {
+              assignedUserId = crypto.randomUUID();
+            }
+          } catch {
+            if (!assignedUserId || assignedUserId.startsWith('std-')) {
+              assignedUserId = crypto.randomUUID();
+            }
+          }
         }
 
         // Upsert do perfil garantindo status 'pendente'
@@ -744,7 +772,7 @@ app.post('/api/db/register', async (req, res) => {
     };
 
     const newRequest = {
-      id: `req-${Date.now()}`,
+      id: crypto.randomUUID ? crypto.randomUUID() : `req-${Date.now()}`,
       user_id: assignedUserId,
       username: cleanUsername,
       grade: newProfile.grade,

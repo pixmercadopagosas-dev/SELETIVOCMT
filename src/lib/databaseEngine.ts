@@ -254,6 +254,33 @@ class DatabaseEngine {
             this.auditLogs = data.auditLogs;
             safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
           }
+
+          // Envia perfis pendentes locais para o servidor caso ainda não existam no servidor
+          const localPending = this.profiles.filter(
+            (p) => p.role === 'estudante' && p.account_status === 'pendente' && p.username
+          );
+          for (const lp of localPending) {
+            const onServer = Array.isArray(data.profiles) && data.profiles.some(
+              (sp: any) => sp.username?.toLowerCase() === lp.username.toLowerCase()
+            );
+            if (!onServer) {
+              fetch('/api/db/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: lp.username,
+                  fullName: lp.full_name,
+                  grade: lp.grade,
+                  avatarUrl: lp.avatar_url,
+                  guardianName: lp.guardian_name,
+                  guardianPhone: lp.guardian_phone,
+                  guardianCpf: lp.guardian_cpf,
+                  email: lp.email,
+                  newUserId: lp.id,
+                }),
+              }).catch(() => {});
+            }
+          }
         }
       }
     } catch {
@@ -958,8 +985,14 @@ class DatabaseEngine {
           }
           this.persistAll();
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Erro ao registrar solicitação no servidor.');
       }
-    } catch {
+    } catch (err: any) {
+      if (err.message && !err.message.includes('fetch')) {
+        throw err;
+      }
       // Offline fallback: mantém os registros locais criados
     }
 
@@ -1211,7 +1244,12 @@ class DatabaseEngine {
         const { data } = await supabase.from('access_requests').select('*');
         if (data && data.length > 0) {
           for (const rq of data as AccessRequest[]) {
-            const idx = this.accessRequests.findIndex((r) => r.id === rq.id || r.user_id === rq.user_id);
+            const idx = this.accessRequests.findIndex(
+              (r) =>
+                r.id === rq.id ||
+                r.user_id === rq.user_id ||
+                (r.username && rq.username && r.username.toLowerCase() === rq.username.toLowerCase())
+            );
             if (idx >= 0) {
               this.accessRequests[idx] = { ...this.accessRequests[idx], ...rq };
             } else {
@@ -1235,7 +1273,7 @@ class DatabaseEngine {
     }
 
     // 5. REGRA DE SEGURANÇA:
-    // Qualquer perfil com status "pendente" que ainda não conste nas solicitações
+    // Qualquer perfil com status "pendente" que ainda não conste nas solicitações pendentes
     for (const p of this.profiles) {
       if (p.role === 'superusuario') continue;
       // Laura Cristina Brito é sempre aprovada
@@ -1248,10 +1286,13 @@ class DatabaseEngine {
       }
 
       if (p.account_status === 'pendente') {
-        const existing = this.accessRequests.find(
-          (r) => r.user_id === p.id || (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())
+        const pendingReq = this.accessRequests.find(
+          (r) =>
+            (r.user_id === p.id ||
+            (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())) &&
+            r.status === 'pendente'
         );
-        if (!existing) {
+        if (!pendingReq) {
           const autoReq: AccessRequest = {
             id: `req-${p.id}`,
             user_id: p.id,
@@ -1283,6 +1324,11 @@ class DatabaseEngine {
       if (p) {
         if (isLaura) {
           p.account_status = 'aprovada';
+        } else if (p.account_status === 'pendente') {
+          // Estudante novo aguarda decisão do Superusuário
+          if (r.status !== 'pendente' && r.status !== 'recusado') {
+            r.status = 'pendente';
+          }
         } else if (r.status === 'aprovado' && p.account_status !== 'aprovada') {
           p.account_status = 'aprovada';
         } else if (p.account_status === 'bloqueada' && r.status === 'pendente') {

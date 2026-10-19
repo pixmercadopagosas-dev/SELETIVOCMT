@@ -168,7 +168,7 @@ function MainApp() {
         if (isLaura) continue;
 
         const u = profiles.find((p) => p.id === r.user_id || (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase()));
-        if (!u || u.account_status !== 'bloqueada') {
+        if (!u || (u.account_status !== 'bloqueada' && u.account_status !== 'aprovada')) {
           pendingKeys.add((r.username || r.user_id || r.id).toLowerCase());
         }
       }
