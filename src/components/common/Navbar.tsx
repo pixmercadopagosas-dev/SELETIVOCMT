@@ -175,8 +175,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Database / Supabase Status Button - VISÍVEL APENAS PARA O SUPERUSUÁRIO */}
-          {currentUser?.role === 'superusuario' ? (
+          {/* Database / Supabase Status Button - VISÍVEL APENAS E EXCLUSIVAMENTE PARA O SUPERUSUÁRIO */}
+          {currentUser?.role === 'superusuario' && (
             <button
               onClick={onOpenSupabaseStatus}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border-2 border-emerald-400 rounded-xl transition-all shadow-xs"
@@ -186,22 +186,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Aba Teste de Banco</span>
               <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
             </button>
-          ) : (
-            onSwitchUser && (
-              <button
-                onClick={async () => {
-                  await onSwitchUser('super-admin-001');
-                  onOpenSupabaseStatus();
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-black text-red-950 bg-red-100/80 hover:bg-red-200 border-2 border-red-300 rounded-xl transition-all shadow-xs"
-                title="Alternar para a conta do Superusuário (Diretoria CMT) para acessar a aba de Teste de Banco de Dados"
-              >
-                <Database className="w-3.5 h-3.5 text-red-700" />
-                <span className="hidden sm:inline">Acessar Teste de Banco</span>
-                <span className="sm:hidden">Teste Banco</span>
-                <span className="text-[9px] bg-red-700 text-white font-extrabold px-1 rounded">Super</span>
-              </button>
-            )
           )}
 
           {/* Notifications Bell */}
@@ -284,7 +268,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={async () => {
                             setShowSwitchMenu(false);
                             await onSwitchUser('super-admin-001');
-                            onOpenSupabaseStatus();
                           }}
                           className="w-full px-4 py-2 text-left text-xs bg-red-50 hover:bg-red-100 flex items-center justify-between font-black text-red-950 border border-red-200 rounded-xl"
                         >
@@ -292,8 +275,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <Shield className="w-3.5 h-3.5 text-red-700" />
                             <span>Acesso Superusuário</span>
                           </div>
-                          <span className="text-[10px] bg-red-700 text-white font-black px-1.5 py-0.5 rounded shadow-xs flex items-center gap-1">
-                            <Database className="w-2.5 h-2.5" />
+                          <span className="text-[10px] bg-red-700 text-white font-black px-1.5 py-0.5 rounded shadow-xs">
                             Diretoria
                           </span>
                         </button>

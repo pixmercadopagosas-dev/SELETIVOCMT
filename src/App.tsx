@@ -162,15 +162,24 @@ function MainApp() {
     const pendingKeys = new Set<string>();
     for (const r of reqs) {
       if (r.status === 'pendente') {
-        const u = profiles.find((p) => p.id === r.user_id || p.username.toLowerCase() === r.username.toLowerCase());
-        if (!u || u.account_status === 'pendente') {
-          pendingKeys.add(r.user_id || r.username.toLowerCase());
+        const isLaura =
+          r.username &&
+          (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357');
+        if (isLaura) continue;
+
+        const u = profiles.find((p) => p.id === r.user_id || (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase()));
+        if (!u || u.account_status !== 'bloqueada') {
+          pendingKeys.add((r.username || r.user_id || r.id).toLowerCase());
         }
       }
     }
     for (const p of profiles) {
       if (p.role !== 'superusuario' && p.account_status === 'pendente') {
-        pendingKeys.add(p.id);
+        const isLaura =
+          (p.username && (p.username.toLowerCase() === 'lauracristina' || p.username.toLowerCase() === 'laurateste357')) ||
+          (p.full_name && p.full_name.toLowerCase().includes('laura cristina'));
+        if (isLaura) continue;
+        pendingKeys.add((p.username || p.id).toLowerCase());
       }
     }
 
@@ -484,7 +493,11 @@ function MainApp() {
         currentUser={currentUser}
         unreadNotificationsCount={unreadNotificationsCount}
         onOpenNotifications={() => setCurrentTab('notificacoes')}
-        onOpenSupabaseStatus={() => setCurrentTab('teste-banco')}
+        onOpenSupabaseStatus={() => {
+          if (currentUser?.role === 'superusuario') {
+            setCurrentTab('teste-banco');
+          }
+        }}
         onOpenProfile={() => setCurrentTab('perfil')}
         onOpenThemeModal={() => setThemeModalOpen(true)}
         onLogout={handleLogout}
@@ -625,7 +638,7 @@ function MainApp() {
               )}
 
               {/* ABA EXCLUSIVA DO SUPERUSUÁRIO: TESTE DE CONEXÃO COM O BANCO */}
-              {currentTab === 'teste-banco' && (
+              {currentTab === 'teste-banco' && currentUser?.role === 'superusuario' && (
                 <DatabaseConnectionView
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setCurrentTab(tab)}
@@ -663,11 +676,13 @@ function MainApp() {
       />
 
       {/* Supabase Status Modal (Acesso restrito ao Superusuário) */}
-      <SupabaseStatusModal
-        isOpen={supabaseModalOpen}
-        onClose={() => setSupabaseModalOpen(false)}
-        onOpenDatabaseTab={() => setCurrentTab('teste-banco')}
-      />
+      {currentUser?.role === 'superusuario' && (
+        <SupabaseStatusModal
+          isOpen={supabaseModalOpen}
+          onClose={() => setSupabaseModalOpen(false)}
+          onOpenDatabaseTab={() => setCurrentTab('teste-banco')}
+        />
+      )}
 
       {/* Theme and Cartoon Selector Modal */}
       <ThemeSelectorModal

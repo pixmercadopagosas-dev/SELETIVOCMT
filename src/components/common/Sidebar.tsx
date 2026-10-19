@@ -201,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </button>
 
-              {/* ABA EXCLUSIVA: TESTE DE CONEXÃO COM O BANCO DE DADOS */}
+              {/* ABA EXCLUSIVA: TESTE DE CONEXÃO COM O BANCO DE DADOS (APENAS SUPERUSUÁRIO) */}
               <button
                 onClick={() => handleItemClick('teste-banco')}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
@@ -217,37 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
               </button>
             </div>
-          ) : (
-            <div className="pt-3 border-t border-slate-800 space-y-2">
-              <div className="mx-1 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800/80 text-left">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-1">
-                  <span className="flex items-center gap-1.5 text-slate-300">
-                    <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-                    Área do Superusuário
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 font-extrabold border border-red-900/50">
-                    Restrito
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 leading-snug mb-2">
-                  A aba <strong>Teste de Banco de Dados</strong> é exclusiva para o Superusuário.
-                </p>
-                {onSwitchToSuperUser && (
-                  <button
-                    onClick={async () => {
-                      await onSwitchToSuperUser();
-                      handleItemClick('teste-banco');
-                    }}
-                    className="w-full py-2 px-2.5 bg-red-800 hover:bg-red-700 text-white rounded-lg text-[11px] font-black flex items-center justify-center gap-1.5 transition-all shadow-xs"
-                    title="Alternar para o perfil de Superusuário e abrir a aba de teste de banco"
-                  >
-                    <Database className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Acessar Teste de Banco</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Active Mascot in Sidebar */}

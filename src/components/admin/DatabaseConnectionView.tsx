@@ -149,44 +149,15 @@ export const DatabaseConnectionView: React.FC<DatabaseConnectionViewProps> = ({
     setTimeout(() => setActionSuccess(null), 3000);
   };
 
-  // Bloqueio de segurança se não for Superusuário
+  useEffect(() => {
+    if (!isSuperUser) {
+      onNavigateTab('inicio');
+    }
+  }, [isSuperUser, onNavigateTab]);
+
+  // Bloqueio de segurança total: se não for Superusuário, não renderiza absolutamente nada
   if (!isSuperUser) {
-    return (
-      <div className="max-w-2xl mx-auto my-12 p-8 bg-red-50 border-2 border-red-300 rounded-3xl text-center space-y-4 shadow-xl animate-in fade-in">
-        <div className="w-16 h-16 bg-red-100 border border-red-300 text-red-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-          <Lock className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <span className="text-[11px] font-black uppercase tracking-wider text-red-600 bg-red-100 px-3 py-1 rounded-full">
-            Acesso Restrito • 403 Proibido
-          </span>
-          <h2 className="text-xl font-extrabold text-red-950 mt-2">
-            Área Exclusiva do Superusuário
-          </h2>
-          <p className="text-xs text-red-800 leading-relaxed max-w-md mx-auto">
-            Apenas a Diretoria Geral do CMT XVII com perfil de Superusuário possui permissão para visualizar credenciais de infraestrutura e efetuar testes de conexão com o banco de dados.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {onSwitchUser && (
-            <button
-              onClick={() => onSwitchUser('super-admin-001')}
-              className="px-6 py-2.5 bg-red-700 hover:bg-red-600 text-white text-xs font-black rounded-xl transition-all shadow-md inline-flex items-center gap-2"
-            >
-              <Database className="w-4 h-4 text-emerald-300" />
-              <span>Entrar como Superusuário (Exige Senha)</span>
-            </button>
-          )}
-          <button
-            onClick={() => onNavigateTab('inicio')}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all shadow-md inline-flex items-center gap-2"
-          >
-            <span>Retornar ao Início</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

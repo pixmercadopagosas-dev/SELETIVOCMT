@@ -385,29 +385,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const list: AccessRequest[] = [];
     const seen = new Set<string>();
 
-    // 1. Processa solicitações de acesso da tabela oficial
+    // 1. Processa solicitações de acesso da tabela oficial com status pendente
     for (const r of requests) {
       if (r.status === 'pendente') {
-        // Laura Cristina Brito já foi aprovada e homologada
-        if (
+        const isLaura =
           r.username &&
-          (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357')
-        ) {
-          continue;
-        }
+          (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357');
+        if (isLaura) continue;
 
         const u = allUsers.find(
           (user) =>
             user.id === r.user_id ||
-            (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase()) ||
-            (user.full_name && r.username && user.full_name.toLowerCase().includes(r.username.toLowerCase()))
+            (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase())
         );
-        // Se o perfil já estiver homologado/aprovado ou bloqueado no banco, não exibe como pendente
-        if (u && (u.account_status === 'aprovada' || u.account_status === 'bloqueada')) {
+
+        // Se o perfil do usuário foi explicitamente bloqueado pela moderação, não reexibe
+        if (u && u.account_status === 'bloqueada') {
           continue;
         }
+
         list.push(r);
-        if (r.user_id) seen.add(r.user_id);
+        if (r.user_id) seen.add(r.user_id.toLowerCase());
         if (r.username) seen.add(r.username.toLowerCase());
       }
     }
@@ -415,22 +413,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     // 2. Adiciona qualquer estudante cadastrado com status 'pendente' que ainda não tenha entrado na lista
     for (const u of allUsers) {
       if (u.role === 'superusuario') continue;
-      // Laura Cristina Brito já foi aprovada e homologada
-      if (
+      const isLaura =
         (u.username && (u.username.toLowerCase() === 'lauracristina' || u.username.toLowerCase() === 'laurateste357')) ||
-        (u.full_name && u.full_name.toLowerCase().includes('laura cristina'))
-      ) {
-        continue;
-      }
+        (u.full_name && u.full_name.toLowerCase().includes('laura cristina'));
+      if (isLaura) continue;
 
       if (u.account_status === 'pendente') {
+        const cleanId = u.id.toLowerCase();
+        const cleanUser = u.username.toLowerCase();
         const isSeen =
-          seen.has(u.id) ||
-          seen.has(u.username.toLowerCase()) ||
+          seen.has(cleanId) ||
+          seen.has(cleanUser) ||
           list.some(
             (r) =>
-              r.user_id === u.id ||
-              (r.username && u.username && r.username.toLowerCase() === u.username.toLowerCase())
+              (r.user_id && r.user_id.toLowerCase() === cleanId) ||
+              (r.username && r.username.toLowerCase() === cleanUser)
           );
 
         if (!isSeen) {
@@ -444,8 +441,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             requested_at: u.created_at || new Date().toISOString(),
             status: 'pendente',
           });
-          seen.add(u.id);
-          seen.add(u.username.toLowerCase());
+          seen.add(cleanId);
+          seen.add(cleanUser);
         }
       }
     }

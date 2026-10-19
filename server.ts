@@ -600,10 +600,11 @@ app.get('/api/db/state', async (req, res) => {
   // 2. Alinha solicitações com o status do perfil e vice-versa:
   // Decisão do Superusuário é soberana: se r.status === 'aprovado', o perfil DEVE ser 'aprovada'
   for (const r of db.accessRequests) {
-    // Caso especial garantido para Laura Cristina
-    if (
-      (r.username && (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357'))
-    ) {
+    // Caso especial garantido para Laura Cristina Brito
+    const isLaura =
+      (r.username && (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357'));
+
+    if (isLaura) {
       if (r.status !== 'aprovado') {
         r.status = 'aprovado';
         dbChanged = true;
@@ -613,17 +614,19 @@ app.get('/api/db/state', async (req, res) => {
     const prof = db.profiles.find(
       (p: any) =>
         p.id === r.user_id ||
-        (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase()) ||
-        (r.username && p.full_name && p.full_name.toLowerCase().includes(r.username.toLowerCase()))
+        (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase())
     );
 
     if (prof) {
-      if (r.status === 'aprovado' && prof.account_status !== 'aprovada') {
+      if (isLaura) {
+        if (prof.account_status !== 'aprovada') {
+          prof.account_status = 'aprovada';
+          prof.updated_at = new Date().toISOString();
+          dbChanged = true;
+        }
+      } else if (r.status === 'aprovado' && prof.account_status !== 'aprovada') {
         prof.account_status = 'aprovada';
         prof.updated_at = new Date().toISOString();
-        dbChanged = true;
-      } else if (prof.account_status === 'aprovada' && r.status === 'pendente') {
-        r.status = 'aprovado';
         dbChanged = true;
       } else if (r.status === 'recusado' && prof.account_status !== 'bloqueada') {
         prof.account_status = 'bloqueada';
@@ -902,20 +905,25 @@ app.post('/api/db/approve', async (req, res) => {
     if (supabaseServerClient) {
       try {
         const idToUpdate = targetIdx !== -1 ? db.profiles[targetIdx].id : cleanWithoutReq;
+        const supaReviewerId =
+          adminId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adminId)
+            ? adminId
+            : '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22';
+
         await supabaseServerClient
           .from('profiles')
           .update({ account_status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', idToUpdate);
+          .or(`id.eq.${idToUpdate},username.ilike.${cleanUsername || cleanLower}`);
 
         await supabaseServerClient
           .from('access_requests')
           .update({
             status: newStatus === 'aprovada' ? 'aprovado' : 'recusado',
             reviewed_at: new Date().toISOString(),
-            reviewed_by: adminId || 'super-admin-001',
+            reviewed_by: supaReviewerId,
             rejection_reason: reason || 'Matrícula conferida e aprovada pela Diretoria',
           })
-          .eq('user_id', idToUpdate);
+          .or(`user_id.eq.${idToUpdate},username.ilike.${cleanUsername || cleanLower}`);
       } catch (supaErr) {
         console.warn('Erro ao atualizar status no Supabase via service_role:', supaErr);
       }
@@ -934,7 +942,7 @@ app.post('/api/db/approve', async (req, res) => {
 });
 
 // 4.4 Exclusão de solicitação pelo Superusuário (aceitar e apagar sempre que quiser)
-app.post('/api/db/delete-request', (req, res) => {
+app.post('/api/db/delete-request', async (req, res) => {
   try {
     const { adminId, targetId, username, deleteProfile = true } = req.body;
     const db = loadServerDb();
@@ -1029,6 +1037,38 @@ app.post('/api/db/delete-request', (req, res) => {
     });
 
     saveServerDb(db);
+
+    // Remove do Supabase via service_role para que não reapareça nas sincronizações
+    if (supabaseServerClient) {
+      try {
+        const idToDelete = relatedUserId || cleanWithoutReq;
+        const usernameToDelete = relatedUsername || cleanUsername;
+
+        if (usernameToDelete) {
+          await supabaseServerClient.from('access_requests').delete().eq('username', usernameToDelete);
+        }
+        if (idToDelete) {
+          await supabaseServerClient.from('access_requests').delete().eq('user_id', idToDelete);
+          await supabaseServerClient.from('access_requests').delete().eq('id', idToDelete);
+        }
+
+        if (deleteProfile) {
+          if (usernameToDelete) {
+            await supabaseServerClient.from('profiles').delete().eq('username', usernameToDelete);
+          }
+          if (idToDelete) {
+            await supabaseServerClient.from('profiles').delete().eq('id', idToDelete);
+            try {
+              if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idToDelete)) {
+                await supabaseServerClient.auth.admin.deleteUser(idToDelete);
+              }
+            } catch {}
+          }
+        }
+      } catch (supaErr) {
+        console.warn('Erro ao remover no Supabase via service_role:', supaErr);
+      }
+    }
 
     return res.json({
       success: true,
