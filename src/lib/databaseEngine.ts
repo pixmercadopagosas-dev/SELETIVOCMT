@@ -1324,15 +1324,19 @@ class DatabaseEngine {
       if (p) {
         if (isLaura) {
           p.account_status = 'aprovada';
+          r.status = 'aprovado';
+        } else if (r.status === 'aprovado') {
+          p.account_status = 'aprovada';
+        } else if (r.status === 'recusado') {
+          p.account_status = 'bloqueada';
+        } else if (p.account_status === 'aprovada') {
+          r.status = 'aprovado';
+        } else if (p.account_status === 'bloqueada') {
+          r.status = 'recusado';
         } else if (p.account_status === 'pendente') {
-          // Estudante novo aguarda decisão do Superusuário
-          if (r.status !== 'pendente' && r.status !== 'recusado') {
+          if (r.status !== 'pendente') {
             r.status = 'pendente';
           }
-        } else if (r.status === 'aprovado' && p.account_status !== 'aprovada') {
-          p.account_status = 'aprovada';
-        } else if (p.account_status === 'bloqueada' && r.status === 'pendente') {
-          r.status = 'recusado';
         }
       }
     }

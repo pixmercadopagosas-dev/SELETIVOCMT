@@ -630,23 +630,33 @@ app.get('/api/db/state', async (req, res) => {
           prof.updated_at = new Date().toISOString();
           dbChanged = true;
         }
+      } else if (r.status === 'aprovado') {
+        if (prof.account_status !== 'aprovada') {
+          prof.account_status = 'aprovada';
+          prof.updated_at = new Date().toISOString();
+          dbChanged = true;
+        }
+      } else if (r.status === 'recusado') {
+        if (prof.account_status !== 'bloqueada') {
+          prof.account_status = 'bloqueada';
+          prof.updated_at = new Date().toISOString();
+          dbChanged = true;
+        }
+      } else if (prof.account_status === 'aprovada') {
+        if (r.status !== 'aprovado') {
+          r.status = 'aprovado';
+          dbChanged = true;
+        }
+      } else if (prof.account_status === 'bloqueada') {
+        if (r.status !== 'recusado') {
+          r.status = 'recusado';
+          dbChanged = true;
+        }
       } else if (prof.account_status === 'pendente') {
-        // Aluno pendente precisa de homologação do Superusuário
-        if (r.status !== 'pendente' && r.status !== 'recusado') {
+        if (r.status !== 'pendente') {
           r.status = 'pendente';
           dbChanged = true;
         }
-      } else if (r.status === 'aprovado' && prof.account_status !== 'aprovada') {
-        prof.account_status = 'aprovada';
-        prof.updated_at = new Date().toISOString();
-        dbChanged = true;
-      } else if (r.status === 'recusado' && prof.account_status !== 'bloqueada') {
-        prof.account_status = 'bloqueada';
-        prof.updated_at = new Date().toISOString();
-        dbChanged = true;
-      } else if (prof.account_status === 'bloqueada' && r.status === 'pendente') {
-        r.status = 'recusado';
-        dbChanged = true;
       }
     }
   }

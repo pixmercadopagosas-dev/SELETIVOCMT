@@ -24,6 +24,7 @@ export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
   useEffect(() => {
     const checkSilent = async () => {
       try {
+        await db.syncWithServer();
         const fresh = await db.getProfileById(currentUser.id);
         if (fresh && fresh.account_status === 'aprovada') {
           onStatusUpdated(fresh);
@@ -31,7 +32,7 @@ export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
       } catch {}
     };
 
-    const interval = setInterval(checkSilent, 3500);
+    const interval = setInterval(checkSilent, 3000);
 
     const handleDbUpdate = () => {
       checkSilent();
@@ -47,6 +48,10 @@ export const PendingApprovalView: React.FC<PendingApprovalViewProps> = ({
   const handleCheckStatus = async () => {
     setChecking(true);
     setMessage(null);
+
+    try {
+      await db.syncWithServer();
+    } catch {}
 
     const fresh = await db.getProfileById(currentUser.id);
     setChecking(false);

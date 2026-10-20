@@ -32,6 +32,7 @@ export interface AccessRequest {
   grade: GradeId;
   guardian_name?: string;
   guardian_phone?: string;
+  guardian_cpf?: string;
   requested_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
