@@ -121,7 +121,7 @@
       "email": "bruna@estudante.cmt.br",
       "grade": "6_ano",
       "avatar_url": "cadet_blue",
-      "account_status": "pendente",
+      "account_status": "aprovada",
       "role": "estudante",
       "guardian_name": "Manoel Ferreira",
       "guardian_phone": "(99) 98111-2233",
@@ -131,7 +131,7 @@
       "total_points": 0,
       "study_streak_days": 0,
       "created_at": "2026-10-19T03:32:18.755849+00:00",
-      "updated_at": "2026-10-19T03:32:18.755849+00:00"
+      "updated_at": "2026-10-20T00:52:52.814+00:00"
     },
     {
       "id": "86ba0ebd-5393-4017-8430-e69a6875c09c",
@@ -212,6 +212,19 @@
   ],
   "accessRequests": [
     {
+      "id": "cf718515-3e69-443b-9abf-d653664d9d7e",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "username": "bruna",
+      "grade": "6_ano",
+      "guardian_name": "Manoel Ferreira",
+      "guardian_phone": "(99) 98111-2233",
+      "requested_at": "2026-10-20T00:45:44.586+00:00",
+      "status": "aprovado",
+      "reviewed_at": "2026-10-20T00:52:53.036+00:00",
+      "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
+      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
+    },
+    {
       "id": "req-1792117405952",
       "user_id": "std-1792117405952",
       "username": "candidato_teste",
@@ -283,33 +296,33 @@
       "grade": "6_ano",
       "guardian_name": "Manoel Ferreira",
       "guardian_phone": "(99) 98111-2233",
-      "requested_at": "2026-10-19T03:32:19.057+00:00",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "status": "pendente",
-      "rejection_reason": null
+      "requested_at": "2026-10-20T00:45:44.586+00:00",
+      "reviewed_at": "2026-10-20T00:52:53.036+00:00",
+      "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
+      "status": "aprovado",
+      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
     },
     {
-      "id": "025cf3ef-dd12-42b5-a482-238d62ea2396",
+      "id": "ef21819e-d893-4585-a378-d53430f7cf59",
       "user_id": "86ba0ebd-5393-4017-8430-e69a6875c09c",
       "username": "teste_auditoria_99",
       "grade": "6_ano",
       "guardian_name": "Pai Auditor",
       "guardian_phone": "(99) 98888-9999",
-      "requested_at": "2026-10-19T23:49:53.376+00:00",
+      "requested_at": "2026-10-19T23:49:52.901+00:00",
       "status": "pendente",
       "reviewed_at": null,
       "reviewed_by": null,
       "rejection_reason": null
     },
     {
-      "id": "39bdf961-c445-4b9d-b1cf-4181472fab2e",
+      "id": "2e832c9c-72d2-4843-ad71-14b4fd210d55",
       "user_id": "ffe0f9c3-7740-4100-ba68-eb4b1d144ce9",
       "username": "teste_bruna_check",
       "grade": "6_ano",
       "guardian_name": "Mae Bruna",
       "guardian_phone": "(99) 99999-9999",
-      "requested_at": "2026-10-19T23:49:53.435+00:00",
+      "requested_at": "2026-10-19T23:49:52.882+00:00",
       "reviewed_at": null,
       "reviewed_by": null,
       "status": "pendente",

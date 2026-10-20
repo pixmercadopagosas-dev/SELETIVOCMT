@@ -33,7 +33,7 @@ import {
   Eye,
   Filter,
 } from 'lucide-react';
-import { db } from '../../lib/databaseEngine';
+import { db, deduplicateProfiles, deduplicateRequests } from '../../lib/databaseEngine';
 import { testSupabaseConnection, isSupabaseConfigured, SupabaseConfigStatus } from '../../lib/supabase';
 import { SUPABASE_MIGRATION_SQL } from '../../lib/supabaseMigrationSql';
 
@@ -111,8 +111,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const reqs = await db.getAccessRequests();
       const logs = await db.getAuditLogs();
       const reps = await db.getReports();
-      setAllUsers(users);
-      setRequests(reqs);
+      setAllUsers(deduplicateProfiles(users));
+      setRequests(deduplicateRequests(reqs));
       setAuditLogs(logs);
       setReports(reps);
     } finally {
@@ -395,30 +395,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setTimeout(() => setActionSuccess(null), 3000);
   };
 
-  const filteredUsers = allUsers.filter((u) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      u.username.toLowerCase().includes(q) ||
-      (u.full_name && u.full_name.toLowerCase().includes(q))
-    );
-  });
+  const filteredUsers = React.useMemo(() => {
+    const unique = deduplicateProfiles(allUsers);
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return unique;
+    return unique.filter((u) => {
+      return (
+        u.username.toLowerCase().includes(q) ||
+        (u.full_name && u.full_name.toLowerCase().includes(q))
+      );
+    });
+  }, [allUsers, searchQuery]);
 
-  // Combina e consolida todas as solicitações de acesso e perfis cadastrados
+  // Combina e consolida todas as solicitações de acesso e perfis cadastrados (1 CARD POR ESTUDANTE)
   const allConsolidatedRequests = React.useMemo(() => {
     const list: AccessRequest[] = [];
-    const seen = new Set<string>();
+    const seenUsernames = new Set<string>();
 
     // 1. Processa solicitações de acesso da base oficial
     for (const r of requests) {
-      const isLaura =
-        r.username &&
-        (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357');
+      if (!r || !r.username) continue;
+      const cleanUser = r.username.trim().toLowerCase();
+      const isLaura = cleanUser === 'lauracristina' || cleanUser === 'laurateste357';
       if (isLaura) continue;
+
+      if (seenUsernames.has(cleanUser)) continue;
+      seenUsernames.add(cleanUser);
 
       const u = allUsers.find(
         (user) =>
-          user.id === r.user_id ||
-          (user.username && r.username && user.username.toLowerCase() === r.username.toLowerCase())
+          (user.username && user.username.trim().toLowerCase() === cleanUser) ||
+          user.id === r.user_id
       );
 
       let effectiveStatus = r.status || 'pendente';
@@ -430,48 +437,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       list.push({
         ...r,
+        username: cleanUser,
         status: effectiveStatus,
         guardian_name: r.guardian_name || u?.guardian_name || 'Responsável Legal',
         guardian_phone: r.guardian_phone || u?.guardian_phone || '',
         guardian_cpf: r.guardian_cpf || u?.guardian_cpf || '',
       });
-
-      if (r.id) seen.add(r.id.toLowerCase());
-      if (r.user_id) seen.add(r.user_id.toLowerCase());
-      if (r.username) seen.add(r.username.toLowerCase());
     }
 
     // 2. Adiciona estudantes cadastrados que ainda não possuam registro explícito na tabela de solicitações
     for (const u of allUsers) {
-      if (u.role === 'superusuario') continue;
+      if (!u || !u.username || u.role === 'superusuario') continue;
+      const cleanUser = u.username.trim().toLowerCase();
       const isLaura =
-        (u.username && (u.username.toLowerCase() === 'lauracristina' || u.username.toLowerCase() === 'laurateste357')) ||
+        cleanUser === 'lauracristina' ||
+        cleanUser === 'laurateste357' ||
         (u.full_name && u.full_name.toLowerCase().includes('laura cristina'));
       if (isLaura) continue;
 
-      const cleanId = u.id.toLowerCase();
-      const cleanUser = u.username.toLowerCase();
-      const isSeen = seen.has(cleanId) || seen.has(cleanUser);
+      if (seenUsernames.has(cleanUser)) continue;
+      seenUsernames.add(cleanUser);
 
-      if (!isSeen) {
-        let st: 'pendente' | 'aprovado' | 'recusado' = 'pendente';
-        if (u.account_status === 'aprovada') st = 'aprovado';
-        else if (u.account_status === 'bloqueada' || u.account_status === 'suspensa') st = 'recusado';
+      let st: 'pendente' | 'aprovado' | 'recusado' = 'pendente';
+      if (u.account_status === 'aprovada') st = 'aprovado';
+      else if (u.account_status === 'bloqueada' || u.account_status === 'suspensa') st = 'recusado';
 
-        list.push({
-          id: `req-${u.id}`,
-          user_id: u.id,
-          username: u.username,
-          grade: u.grade,
-          guardian_name: u.guardian_name || 'Responsável Legal',
-          guardian_phone: u.guardian_phone || '',
-          guardian_cpf: u.guardian_cpf || '',
-          requested_at: u.created_at || new Date().toISOString(),
-          status: st,
-        });
-        seen.add(cleanId);
-        seen.add(cleanUser);
-      }
+      list.push({
+        id: `req-${u.id}`,
+        user_id: u.id,
+        username: cleanUser,
+        grade: u.grade,
+        guardian_name: u.guardian_name || 'Responsável Legal',
+        guardian_phone: u.guardian_phone || '',
+        guardian_cpf: u.guardian_cpf || '',
+        requested_at: u.created_at || new Date().toISOString(),
+        status: st,
+      });
     }
 
     return list.sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime());

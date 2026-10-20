@@ -104,6 +104,95 @@ function safeStorageSet<T>(key: string, value: T): void {
   }
 }
 
+export function deduplicateProfiles(profiles: UserProfile[]): UserProfile[] {
+  const map = new Map<string, UserProfile>();
+  for (const p of profiles) {
+    if (!p || !p.username) continue;
+    const key = p.username.trim().toLowerCase();
+    const isSuper =
+      p.id === ROOT_SUPERADMIN.id ||
+      p.id === 'super-admin-001' ||
+      p.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+      p.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
+      key === 'diretoria_cmt';
+
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, {
+        ...p,
+        username: key,
+        role: isSuper ? 'superusuario' : p.role || 'estudante',
+        account_status: isSuper ? 'aprovada' : p.account_status,
+      });
+    } else {
+      const hasBetterId = !p.id.startsWith('std-') && existing.id.startsWith('std-');
+      const hasApproved = p.account_status === 'aprovada' || existing.account_status === 'aprovada';
+      const hasBlocked = (p.account_status === 'bloqueada' || existing.account_status === 'bloqueada') && !hasApproved;
+      const effectiveStatus = hasApproved ? 'aprovada' : hasBlocked ? 'bloqueada' : (existing.account_status || p.account_status);
+
+      map.set(key, {
+        ...existing,
+        ...p,
+        id: hasBetterId ? p.id : existing.id,
+        username: key,
+        role: isSuper || existing.role === 'superusuario' || p.role === 'superusuario' ? 'superusuario' : 'estudante',
+        account_status: effectiveStatus,
+        full_name:
+          p.full_name && p.full_name.trim() !== key && p.full_name.length > (existing.full_name?.length || 0)
+            ? p.full_name
+            : existing.full_name || p.full_name,
+        guardian_name: p.guardian_name || existing.guardian_name,
+        guardian_phone: p.guardian_phone || existing.guardian_phone,
+        guardian_cpf: p.guardian_cpf || existing.guardian_cpf,
+        email: p.email || existing.email,
+        grade: p.grade || existing.grade,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+export function deduplicateRequests(requests: AccessRequest[]): AccessRequest[] {
+  const map = new Map<string, AccessRequest>();
+  for (const r of requests) {
+    if (!r || !r.username) continue;
+    const key = r.username.trim().toLowerCase();
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...r, username: key });
+    } else {
+      const isApproved = r.status === 'aprovado' || existing.status === 'aprovado';
+      const isRejected = (r.status === 'recusado' || existing.status === 'recusado') && !isApproved;
+      const effectiveStatus: 'pendente' | 'aprovado' | 'recusado' = isApproved
+        ? 'aprovado'
+        : isRejected
+        ? 'recusado'
+        : 'pendente';
+      const hasBetterUserId =
+        !r.user_id.startsWith('std-') &&
+        !r.user_id.startsWith('req-') &&
+        (existing.user_id.startsWith('std-') || existing.user_id.startsWith('req-'));
+
+      map.set(key, {
+        ...existing,
+        ...r,
+        id: existing.id || r.id,
+        user_id: hasBetterUserId ? r.user_id : existing.user_id,
+        username: key,
+        status: effectiveStatus,
+        guardian_name: r.guardian_name || existing.guardian_name,
+        guardian_phone: r.guardian_phone || existing.guardian_phone,
+        guardian_cpf: r.guardian_cpf || existing.guardian_cpf,
+        requested_at: existing.requested_at || r.requested_at,
+        reviewed_at: existing.reviewed_at || r.reviewed_at,
+        reviewed_by: existing.reviewed_by || r.reviewed_by,
+        rejection_reason: existing.rejection_reason || r.rejection_reason,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 class DatabaseEngine {
   private profiles: UserProfile[] = [];
   private accessRequests: AccessRequest[] = [];
@@ -190,47 +279,12 @@ class DatabaseEngine {
         const data = await res.json();
         if (data && data.success) {
           if (Array.isArray(data.profiles) && data.profiles.length > 0) {
-            for (const sp of data.profiles) {
-              const isSuper =
-                sp.id === ROOT_SUPERADMIN.id ||
-                sp.id === 'super-admin-001' ||
-                sp.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
-                sp.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
-                sp.username?.toLowerCase() === 'diretoria_cmt';
-
-              if (isSuper) {
-                sp.role = 'superusuario';
-                sp.account_status = 'aprovada';
-              }
-
-              const idx = this.profiles.findIndex(
-                (p) =>
-                  p.id === sp.id ||
-                  (p.username && sp.username && p.username.toLowerCase() === sp.username.toLowerCase())
-              );
-              if (idx >= 0) {
-                this.profiles[idx] = { ...this.profiles[idx], ...sp };
-              } else {
-                this.profiles.push(sp);
-              }
-            }
+            this.profiles = deduplicateProfiles([...this.profiles, ...data.profiles]);
             safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
           }
 
           if (Array.isArray(data.accessRequests) && data.accessRequests.length > 0) {
-            for (const req of data.accessRequests) {
-              const idx = this.accessRequests.findIndex(
-                (r) =>
-                  r.id === req.id ||
-                  r.user_id === req.user_id ||
-                  (r.username && req.username && r.username.toLowerCase() === req.username.toLowerCase())
-              );
-              if (idx >= 0) {
-                this.accessRequests[idx] = { ...this.accessRequests[idx], ...req };
-              } else {
-                this.accessRequests.push(req);
-              }
-            }
+            this.accessRequests = deduplicateRequests([...this.accessRequests, ...data.accessRequests]);
             safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
           }
 
@@ -344,7 +398,7 @@ class DatabaseEngine {
       }
     }
 
-    this.profiles = cleanProfiles;
+    this.profiles = deduplicateProfiles(cleanProfiles);
 
     // Inicializa credenciais do banco de dados (com a senha oficial do Superusuário Ojf6994#)
     const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []);
@@ -365,10 +419,10 @@ class DatabaseEngine {
     this.credentials = storedCredentials;
     this.recoveryRequests = safeStorageGet<PasswordRecoveryRequest[]>(STORAGE_KEYS.RECOVERY_REQUESTS, []);
 
-    this.accessRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
+    const loadedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
       (r) => !r.id.startsWith('demo-') && r.username !== 'gabriel_novato'
     );
-    for (const r of this.accessRequests) {
+    for (const r of loadedRequests) {
       if (
         r.username &&
         (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357')
@@ -376,6 +430,7 @@ class DatabaseEngine {
         r.status = 'aprovado';
       }
     }
+    this.accessRequests = deduplicateRequests(loadedRequests);
 
     this.lessonProgress = safeStorageGet<LessonProgress[]>(STORAGE_KEYS.LESSON_PROGRESS, []);
     this.questionAttempts = safeStorageGet<QuestionAttempt[]>(STORAGE_KEYS.QUESTION_ATTEMPTS, []);
@@ -416,6 +471,8 @@ class DatabaseEngine {
   }
 
   private persistAll() {
+    this.profiles = deduplicateProfiles(this.profiles);
+    this.accessRequests = deduplicateRequests(this.accessRequests);
     safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
     safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
     safeStorageSet(STORAGE_KEYS.LESSON_PROGRESS, this.lessonProgress);
@@ -441,45 +498,13 @@ class DatabaseEngine {
     try {
       const { data: remoteProfiles } = await supabase.from('profiles').select('*');
       if (remoteProfiles && remoteProfiles.length > 0) {
-        for (const rp of remoteProfiles) {
-          const isSuper =
-            rp.id === ROOT_SUPERADMIN.id ||
-            rp.id === 'super-admin-001' ||
-            rp.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
-            rp.username?.toLowerCase() === 'diretoria_cmt';
-
-          const idx = this.profiles.findIndex(
-            (p) => p.id === rp.id || p.username.toLowerCase() === rp.username.toLowerCase()
-          );
-
-          if (idx >= 0) {
-            this.profiles[idx] = {
-              ...this.profiles[idx],
-              ...rp,
-              role: isSuper ? 'superusuario' : rp.role,
-              account_status: isSuper ? 'aprovada' : rp.account_status,
-            };
-          } else {
-            if (isSuper) {
-              rp.role = 'superusuario';
-              rp.account_status = 'aprovada';
-            }
-            this.profiles.push(rp);
-          }
-        }
+        this.profiles = deduplicateProfiles([...this.profiles, ...(remoteProfiles as UserProfile[])]);
         safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
       }
 
       const { data: remoteRequests } = await supabase.from('access_requests').select('*');
       if (remoteRequests && remoteRequests.length > 0) {
-        for (const rq of remoteRequests) {
-          const idx = this.accessRequests.findIndex((r) => r.id === rq.id || r.user_id === rq.user_id);
-          if (idx >= 0) {
-            this.accessRequests[idx] = { ...this.accessRequests[idx], ...rq };
-          } else {
-            this.accessRequests.push(rq);
-          }
-        }
+        this.accessRequests = deduplicateRequests([...this.accessRequests, ...(remoteRequests as AccessRequest[])]);
         safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
       }
     } catch (e) {
@@ -596,14 +621,7 @@ class DatabaseEngine {
   async getAllProfiles(): Promise<UserProfile[]> {
     // 1. Recarrega do armazenamento local
     const stored = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
-    for (const p of stored) {
-      const idx = this.profiles.findIndex((item) => item.id === p.id || item.username === p.username);
-      if (idx >= 0) {
-        this.profiles[idx] = { ...this.profiles[idx], ...p };
-      } else {
-        this.profiles.push(p);
-      }
-    }
+    this.profiles = deduplicateProfiles([...this.profiles, ...stored]);
 
     // 2. Sincroniza com servidor central se disponível
     await this.syncWithServer();
@@ -613,14 +631,7 @@ class DatabaseEngine {
       try {
         const { data } = await supabase.from('profiles').select('*');
         if (data && data.length > 0) {
-          for (const rp of data as UserProfile[]) {
-            const idx = this.profiles.findIndex((p) => p.id === rp.id);
-            if (idx >= 0) {
-              this.profiles[idx] = { ...this.profiles[idx], ...rp };
-            } else {
-              this.profiles.push(rp);
-            }
-          }
+          this.profiles = deduplicateProfiles([...this.profiles, ...(data as UserProfile[])]);
         }
       } catch (e) {
         console.warn('Erro ao listar perfis do Supabase:', e);
@@ -639,6 +650,7 @@ class DatabaseEngine {
         account_status: 'aprovada',
       };
     }
+    this.profiles = deduplicateProfiles(this.profiles);
     safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
 
     return [...this.profiles];
@@ -1226,14 +1238,7 @@ class DatabaseEngine {
   async getAccessRequests(): Promise<AccessRequest[]> {
     // 1. Recarrega do armazenamento local
     const storedReqs = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []);
-    for (const r of storedReqs) {
-      const idx = this.accessRequests.findIndex((item) => item.id === r.id || item.user_id === r.user_id);
-      if (idx >= 0) {
-        this.accessRequests[idx] = { ...this.accessRequests[idx], ...r };
-      } else {
-        this.accessRequests.push(r);
-      }
-    }
+    this.accessRequests = deduplicateRequests([...this.accessRequests, ...storedReqs]);
 
     // 2. Sincroniza com o servidor central
     await this.syncWithServer();
@@ -1243,19 +1248,7 @@ class DatabaseEngine {
       try {
         const { data } = await supabase.from('access_requests').select('*');
         if (data && data.length > 0) {
-          for (const rq of data as AccessRequest[]) {
-            const idx = this.accessRequests.findIndex(
-              (r) =>
-                r.id === rq.id ||
-                r.user_id === rq.user_id ||
-                (r.username && rq.username && r.username.toLowerCase() === rq.username.toLowerCase())
-            );
-            if (idx >= 0) {
-              this.accessRequests[idx] = { ...this.accessRequests[idx], ...rq };
-            } else {
-              this.accessRequests.push(rq);
-            }
-          }
+          this.accessRequests = deduplicateRequests([...this.accessRequests, ...(data as AccessRequest[])]);
         }
       } catch (e) {
         console.warn('Erro ao buscar solicitações do Supabase:', e);
@@ -1273,75 +1266,77 @@ class DatabaseEngine {
     }
 
     // 5. REGRA DE SEGURANÇA:
-    // Qualquer perfil com status "pendente" que ainda não conste nas solicitações pendentes
+    // Qualquer perfil com status "pendente" que ainda não conste nas solicitações (sem duplicar!)
     for (const p of this.profiles) {
       if (p.role === 'superusuario') continue;
-      // Laura Cristina Brito é sempre aprovada
-      if (
-        (p.username && (p.username.toLowerCase() === 'lauracristina' || p.username.toLowerCase() === 'laurateste357')) ||
-        (p.full_name && p.full_name.toLowerCase().includes('laura cristina'))
-      ) {
+      const cleanUser = p.username.toLowerCase().trim();
+      const isLaura =
+        cleanUser === 'lauracristina' ||
+        cleanUser === 'laurateste357' ||
+        (p.full_name && p.full_name.toLowerCase().includes('laura cristina'));
+
+      if (isLaura) {
         p.account_status = 'aprovada';
         continue;
       }
 
-      if (p.account_status === 'pendente') {
-        const pendingReq = this.accessRequests.find(
-          (r) =>
-            (r.user_id === p.id ||
-            (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())) &&
-            r.status === 'pendente'
-        );
-        if (!pendingReq) {
-          const autoReq: AccessRequest = {
-            id: `req-${p.id}`,
-            user_id: p.id,
-            username: p.username,
-            grade: p.grade,
-            guardian_name: p.guardian_name || 'Responsável Legal',
-            guardian_phone: p.guardian_phone || '',
-            requested_at: p.created_at || new Date().toISOString(),
-            status: 'pendente',
-          };
-          this.accessRequests.unshift(autoReq);
-        }
+      // Se já existe qualquer solicitação para este usuário, NÃO cria outra
+      const existingReq = this.accessRequests.find(
+        (r) =>
+          r.username.toLowerCase().trim() === cleanUser ||
+          r.user_id === p.id ||
+          (r.id && r.id.toLowerCase() === `req-${p.id.toLowerCase()}`)
+      );
+
+      if (!existingReq && p.account_status === 'pendente') {
+        const autoReq: AccessRequest = {
+          id: `req-${p.id}`,
+          user_id: p.id,
+          username: cleanUser,
+          grade: p.grade,
+          guardian_name: p.guardian_name || 'Responsável Legal',
+          guardian_phone: p.guardian_phone || '',
+          requested_at: p.created_at || new Date().toISOString(),
+          status: 'pendente',
+        };
+        this.accessRequests.unshift(autoReq);
       }
     }
 
-    // 6. Alinhamento soberano: Se a solicitação foi aprovada pelo Superusuário ou se o perfil está aprovado
+    // 6. Alinhamento soberano: Se a conta foi aprovada (no perfil ou na solicitação), a aprovação prevalece
     for (const r of this.accessRequests) {
-      const isLaura =
-        r.username &&
-        (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357');
+      const cleanUser = r.username.toLowerCase().trim();
+      const isLaura = cleanUser === 'lauracristina' || cleanUser === 'laurateste357';
 
       if (isLaura) {
         r.status = 'aprovado';
       }
 
       const p = this.profiles.find(
-        (item) => item.id === r.user_id || (item.username && r.username && item.username.toLowerCase() === r.username.toLowerCase())
+        (item) => item.username.toLowerCase().trim() === cleanUser || item.id === r.user_id
       );
+
       if (p) {
         if (isLaura) {
           p.account_status = 'aprovada';
           r.status = 'aprovado';
-        } else if (r.status === 'aprovado') {
+        } else if (r.status === 'aprovado' || p.account_status === 'aprovada') {
           p.account_status = 'aprovada';
-        } else if (r.status === 'recusado') {
-          p.account_status = 'bloqueada';
-        } else if (p.account_status === 'aprovada') {
           r.status = 'aprovado';
-        } else if (p.account_status === 'bloqueada') {
+        } else if (r.status === 'recusado' || p.account_status === 'bloqueada' || p.account_status === 'suspensa') {
+          p.account_status = 'bloqueada';
           r.status = 'recusado';
-        } else if (p.account_status === 'pendente') {
-          if (r.status !== 'pendente') {
-            r.status = 'pendente';
-          }
+        } else {
+          p.account_status = 'pendente';
+          r.status = 'pendente';
         }
       }
     }
 
+    this.accessRequests = deduplicateRequests(this.accessRequests);
+    this.profiles = deduplicateProfiles(this.profiles);
     safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+    safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
     return [...this.accessRequests];
   }
 

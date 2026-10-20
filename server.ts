@@ -516,6 +516,80 @@ function saveServerDb(data: ServerDbData) {
   }
 }
 
+function serverDeduplicateProfiles(profiles: any[]): any[] {
+  const map = new Map<string, any>();
+  for (const p of profiles) {
+    if (!p || !p.username) continue;
+    const key = p.username.trim().toLowerCase();
+    const isSuper =
+      p.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+      p.id === 'super-admin-001' ||
+      p.email?.toLowerCase() === 'pixmercadopagosas@gmail.com' ||
+      key === 'diretoria_cmt';
+
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, {
+        ...p,
+        username: key,
+        role: isSuper ? 'superusuario' : p.role || 'estudante',
+        account_status: isSuper ? 'aprovada' : p.account_status,
+      });
+    } else {
+      const hasBetterId = !p.id.startsWith('std-') && existing.id.startsWith('std-');
+      const hasApproved = p.account_status === 'aprovada' || existing.account_status === 'aprovada';
+      const hasBlocked = (p.account_status === 'bloqueada' || existing.account_status === 'bloqueada') && !hasApproved;
+      const effectiveStatus = hasApproved ? 'aprovada' : hasBlocked ? 'bloqueada' : (existing.account_status || p.account_status);
+
+      map.set(key, {
+        ...existing,
+        ...p,
+        id: hasBetterId ? p.id : existing.id,
+        username: key,
+        role: isSuper || existing.role === 'superusuario' || p.role === 'superusuario' ? 'superusuario' : 'estudante',
+        account_status: effectiveStatus,
+        full_name: (p.full_name && p.full_name.trim() !== key && p.full_name.length > (existing.full_name?.length || 0)) ? p.full_name : (existing.full_name || p.full_name),
+        guardian_name: p.guardian_name || existing.guardian_name,
+        guardian_phone: p.guardian_phone || existing.guardian_phone,
+        guardian_cpf: p.guardian_cpf || existing.guardian_cpf,
+        email: p.email || existing.email,
+        grade: p.grade || existing.grade,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function serverDeduplicateRequests(requests: any[]): any[] {
+  const map = new Map<string, any>();
+  for (const r of requests) {
+    if (!r || !r.username) continue;
+    const key = r.username.trim().toLowerCase();
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...r, username: key });
+    } else {
+      const isApproved = r.status === 'aprovado' || existing.status === 'aprovado';
+      const isRejected = (r.status === 'recusado' || existing.status === 'recusado') && !isApproved;
+      const effectiveStatus = isApproved ? 'aprovado' : isRejected ? 'recusado' : 'pendente';
+      const hasBetterUserId = !r.user_id.startsWith('std-') && !r.user_id.startsWith('req-') && (existing.user_id.startsWith('std-') || existing.user_id.startsWith('req-'));
+
+      map.set(key, {
+        ...existing,
+        ...r,
+        id: existing.id || r.id,
+        user_id: hasBetterUserId ? r.user_id : existing.user_id,
+        username: key,
+        status: effectiveStatus,
+        guardian_name: r.guardian_name || existing.guardian_name,
+        guardian_phone: r.guardian_phone || existing.guardian_phone,
+        requested_at: existing.requested_at || r.requested_at,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 // 4.1 Retornar estado completo do banco de dados para os clientes (com integração Supabase)
 app.get('/api/db/state', async (req, res) => {
   const db = loadServerDb();
@@ -525,41 +599,23 @@ app.get('/api/db/state', async (req, res) => {
     try {
       const { data: supaProfiles } = await supabaseServerClient.from('profiles').select('*');
       if (supaProfiles && supaProfiles.length > 0) {
-        for (const sp of supaProfiles) {
-          const idx = db.profiles.findIndex((p: any) => p.id === sp.id || p.username.toLowerCase() === sp.username.toLowerCase());
-          if (idx >= 0) {
-            db.profiles[idx] = { ...db.profiles[idx], ...sp };
-          } else {
-            db.profiles.push(sp);
-          }
-        }
+        db.profiles = serverDeduplicateProfiles([...db.profiles, ...supaProfiles]);
       }
 
       const { data: supaReqs } = await supabaseServerClient.from('access_requests').select('*');
       if (supaReqs && supaReqs.length > 0) {
-        for (const sr of supaReqs) {
-          const idx = db.accessRequests.findIndex(
-            (r: any) =>
-              r.id === sr.id ||
-              r.user_id === sr.user_id ||
-              (r.username && sr.username && r.username.toLowerCase() === sr.username.toLowerCase())
-          );
-          if (idx >= 0) {
-            db.accessRequests[idx] = { ...db.accessRequests[idx], ...sr };
-          } else {
-            db.accessRequests.push(sr);
-          }
-        }
+        db.accessRequests = serverDeduplicateRequests([...db.accessRequests, ...supaReqs]);
       }
-
-      saveServerDb(db);
     } catch (err) {
       console.warn('Erro ao sincronizar com Supabase em /api/db/state:', err);
     }
   }
 
-  // REGRA MESTRA GARANTIDA (Executada SEMPRE, mesmo sem Supabase):
-  // 1. Todo perfil pendente DEVE ter uma solicitação pendente visível para o Superusuário
+  // Deduplica perfis e solicitações
+  db.profiles = serverDeduplicateProfiles(db.profiles);
+  db.accessRequests = serverDeduplicateRequests(db.accessRequests);
+
+  // 1. Todo perfil pendente DEVE ter uma solicitação visível (sem duplicar!)
   let dbChanged = false;
   for (const p of db.profiles) {
     if (p.role === 'superusuario' || p.id === 'super-admin-001' || p.username === 'diretoria_cmt') {
@@ -568,11 +624,9 @@ app.get('/api/db/state', async (req, res) => {
       continue;
     }
 
-    // Caso especial garantido: Laura Cristina Brito está sempre aprovada
-    if (
-      (p.username && (p.username.toLowerCase() === 'lauracristina' || p.username.toLowerCase() === 'laurateste357')) ||
-      (p.full_name && p.full_name.toLowerCase().includes('laura cristina'))
-    ) {
+    // Laura Cristina Brito é sempre aprovada
+    const cleanUser = p.username.toLowerCase().trim();
+    if (cleanUser === 'lauracristina' || cleanUser === 'laurateste357') {
       if (p.account_status !== 'aprovada') {
         p.account_status = 'aprovada';
         p.updated_at = new Date().toISOString();
@@ -580,79 +634,65 @@ app.get('/api/db/state', async (req, res) => {
       }
     }
 
-    if (p.account_status === 'pendente') {
-      const pendingReq = db.accessRequests.find(
-        (r: any) =>
-          (r.user_id === p.id ||
-          (r.username && p.username && r.username.toLowerCase() === p.username.toLowerCase())) &&
-          r.status === 'pendente'
-      );
-      if (!pendingReq) {
-        db.accessRequests.unshift({
-          id: crypto.randomUUID ? crypto.randomUUID() : `req-${p.id}`,
-          user_id: p.id,
-          username: p.username,
-          grade: p.grade || '6_ano',
-          guardian_name: p.guardian_name || 'Responsável Legal',
-          guardian_phone: p.guardian_phone || '',
-          requested_at: p.created_at || new Date().toISOString(),
-          status: 'pendente',
-        });
-        dbChanged = true;
-      }
+    // Apenas se não existir solicitação para esse estudante
+    const existingReq = db.accessRequests.find(
+      (r: any) =>
+        r.username?.toLowerCase().trim() === cleanUser ||
+        r.user_id === p.id
+    );
+
+    if (!existingReq && p.account_status === 'pendente') {
+      db.accessRequests.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : `req-${p.id}`,
+        user_id: p.id,
+        username: cleanUser,
+        grade: p.grade || '6_ano',
+        guardian_name: p.guardian_name || 'Responsável Legal',
+        guardian_phone: p.guardian_phone || '',
+        requested_at: p.created_at || new Date().toISOString(),
+        status: 'pendente',
+      });
+      dbChanged = true;
     }
   }
 
-  // 2. Alinha solicitações com o status do perfil e vice-versa:
-  // Decisão do Superusuário é soberana: se r.status === 'aprovado', o perfil DEVE ser 'aprovada'
+  // 2. Alinha solicitações com o perfil: aprovação é soberana
   for (const r of db.accessRequests) {
-    // Caso especial garantido para Laura Cristina Brito
-    const isLaura =
-      (r.username && (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357'));
-
-    if (isLaura) {
-      if (r.status !== 'aprovado') {
-        r.status = 'aprovado';
-        dbChanged = true;
-      }
-    }
+    const cleanUser = r.username?.toLowerCase().trim();
+    const isLaura = cleanUser === 'lauracristina' || cleanUser === 'laurateste357';
 
     const prof = db.profiles.find(
       (p: any) =>
-        p.id === r.user_id ||
-        (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase())
+        p.username?.toLowerCase().trim() === cleanUser ||
+        p.id === r.user_id
     );
 
     if (prof) {
-      if (isLaura) {
+      if (isLaura || r.status === 'aprovado' || prof.account_status === 'aprovada') {
         if (prof.account_status !== 'aprovada') {
           prof.account_status = 'aprovada';
           prof.updated_at = new Date().toISOString();
           dbChanged = true;
         }
-      } else if (r.status === 'aprovado') {
-        if (prof.account_status !== 'aprovada') {
-          prof.account_status = 'aprovada';
-          prof.updated_at = new Date().toISOString();
+        if (r.status !== 'aprovado') {
+          r.status = 'aprovado';
           dbChanged = true;
         }
-      } else if (r.status === 'recusado') {
+      } else if (r.status === 'recusado' || prof.account_status === 'bloqueada' || prof.account_status === 'suspensa') {
         if (prof.account_status !== 'bloqueada') {
           prof.account_status = 'bloqueada';
           prof.updated_at = new Date().toISOString();
           dbChanged = true;
         }
-      } else if (prof.account_status === 'aprovada') {
-        if (r.status !== 'aprovado') {
-          r.status = 'aprovado';
-          dbChanged = true;
-        }
-      } else if (prof.account_status === 'bloqueada') {
         if (r.status !== 'recusado') {
           r.status = 'recusado';
           dbChanged = true;
         }
-      } else if (prof.account_status === 'pendente') {
+      } else {
+        if (prof.account_status !== 'pendente') {
+          prof.account_status = 'pendente';
+          dbChanged = true;
+        }
         if (r.status !== 'pendente') {
           r.status = 'pendente';
           dbChanged = true;
@@ -661,9 +701,10 @@ app.get('/api/db/state', async (req, res) => {
     }
   }
 
-  if (dbChanged) {
-    saveServerDb(db);
-  }
+  db.profiles = serverDeduplicateProfiles(db.profiles);
+  db.accessRequests = serverDeduplicateRequests(db.accessRequests);
+
+  saveServerDb(db);
 
   res.json({
     success: true,
@@ -937,6 +978,9 @@ app.post('/api/db/approve', async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
+    // Deduplica o banco oficial antes de salvar
+    db.profiles = serverDeduplicateProfiles(db.profiles);
+    db.accessRequests = serverDeduplicateRequests(db.accessRequests);
     saveServerDb(db);
 
     // Atualiza diretamente no Supabase via service_role se configurado
@@ -948,20 +992,43 @@ app.post('/api/db/approve', async (req, res) => {
             ? adminId
             : '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22';
 
-        await supabaseServerClient
-          .from('profiles')
-          .update({ account_status: newStatus, updated_at: new Date().toISOString() })
-          .or(`id.eq.${idToUpdate},username.ilike.${cleanUsername || cleanLower}`);
+        const isValidUuid = (val: string) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
-        await supabaseServerClient
-          .from('access_requests')
-          .update({
-            status: newStatus === 'aprovada' ? 'aprovado' : 'recusado',
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: supaReviewerId,
-            rejection_reason: reason || 'Matrícula conferida e aprovada pela Diretoria',
-          })
-          .or(`user_id.eq.${idToUpdate},username.ilike.${cleanUsername || cleanLower}`);
+        const targetUserQuery = cleanUsername || cleanLower;
+        if (targetUserQuery) {
+          await supabaseServerClient
+            .from('profiles')
+            .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+            .ilike('username', targetUserQuery);
+
+          await supabaseServerClient
+            .from('access_requests')
+            .update({
+              status: newStatus === 'aprovada' ? 'aprovado' : 'recusado',
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: supaReviewerId,
+              rejection_reason: reason || 'Matrícula conferida e aprovada pela Diretoria',
+            })
+            .ilike('username', targetUserQuery);
+        }
+
+        if (isValidUuid(idToUpdate)) {
+          await supabaseServerClient
+            .from('profiles')
+            .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', idToUpdate);
+
+          await supabaseServerClient
+            .from('access_requests')
+            .update({
+              status: newStatus === 'aprovada' ? 'aprovado' : 'recusado',
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: supaReviewerId,
+              rejection_reason: reason || 'Matrícula conferida e aprovada pela Diretoria',
+            })
+            .eq('user_id', idToUpdate);
+        }
       } catch (supaErr) {
         console.warn('Erro ao atualizar status no Supabase via service_role:', supaErr);
       }
