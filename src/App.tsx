@@ -158,14 +158,13 @@ function MainApp() {
     const reqs = await db.getAccessRequests();
     const profiles = await db.getAllProfiles();
 
-    // Contagem infalível de solicitações pendentes para a badge do Superusuário
+    // Contagem de solicitações pendentes reais para a badge do Superusuário
     const pendingKeys = new Set<string>();
     for (const r of reqs) {
       if (r.status === 'pendente') {
-        const isLaura =
-          r.username &&
-          (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357');
-        if (isLaura) continue;
+        const cleanUser = (r.username || '').toLowerCase();
+        if (cleanUser === 'lauracristina') continue;
+        if (cleanUser.includes('teste') || cleanUser.startsWith('candidato') || cleanUser === 'novocandidato2026') continue;
 
         const u = profiles.find((p) => p.id === r.user_id || (p.username && r.username && p.username.toLowerCase() === r.username.toLowerCase()));
         if (!u || (u.account_status !== 'bloqueada' && u.account_status !== 'aprovada')) {
@@ -175,10 +174,10 @@ function MainApp() {
     }
     for (const p of profiles) {
       if (p.role !== 'superusuario' && p.account_status === 'pendente') {
-        const isLaura =
-          (p.username && (p.username.toLowerCase() === 'lauracristina' || p.username.toLowerCase() === 'laurateste357')) ||
-          (p.full_name && p.full_name.toLowerCase().includes('laura cristina'));
+        const cleanUser = (p.username || '').toLowerCase();
+        const isLaura = cleanUser === 'lauracristina' || (p.full_name && p.full_name.toLowerCase().includes('laura cristina'));
         if (isLaura) continue;
+        if (cleanUser.includes('teste') || cleanUser.startsWith('candidato') || cleanUser === 'novocandidato2026') continue;
         pendingKeys.add((p.username || p.id).toLowerCase());
       }
     }

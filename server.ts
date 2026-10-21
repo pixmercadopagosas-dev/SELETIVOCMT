@@ -494,6 +494,11 @@ function loadServerDb(): ServerDbData {
       }
       if (!parsed.accessRequests) parsed.accessRequests = [];
       if (!parsed.auditLogs) parsed.auditLogs = [];
+
+      parsed.profiles = (parsed.profiles || []).filter((p: any) => !isFictitiousUser(p));
+      parsed.accessRequests = (parsed.accessRequests || []).filter((r: any) => !isFictitiousUser(r));
+      parsed.credentials = (parsed.credentials || []).filter((c: any) => !isFictitiousUser(c));
+
       return parsed;
     }
   } catch (err) {
@@ -516,10 +521,67 @@ function saveServerDb(data: ServerDbData) {
   }
 }
 
+const FICTITIOUS_EXACT_USERNAMES = new Set([
+  'candidato_teste',
+  'laurateste357',
+  'candidato657687',
+  'novocandidato2026',
+  'teste_auditoria_99',
+  'teste_bruna_check',
+  'aluno_teste_validacao',
+  'aluno_teste_rejeitado',
+  'cadete_marcos',
+  'anabeatriz_balsas',
+  'gabriel_novato',
+  'candidato_demo',
+]);
+
+function isFictitiousUser(user: any): boolean {
+  if (!user) return true;
+  const username = (user.username || '').toLowerCase().trim();
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.full_name || '').toLowerCase().trim();
+  const id = (user.id || user.user_id || '').toLowerCase().trim();
+
+  // Contas reais oficiais preservadas
+  if (
+    username === 'diretoria_cmt' ||
+    id === 'super-admin-001' ||
+    id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+    email === 'pixmercadopagosas@gmail.com'
+  ) {
+    return false;
+  }
+
+  if (
+    username === 'lauracristina' ||
+    id === '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a' ||
+    email === 'lauracristina@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  if (
+    username === 'bruna' ||
+    id === '8771b727-3d5e-47cb-b3a6-6db0abea8dc5' ||
+    email === 'bruna@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  // Padrões de testes e fictícios a remover
+  if (FICTITIOUS_EXACT_USERNAMES.has(username)) return true;
+  if (username.includes('teste') || email.includes('teste') || name.includes('teste')) return true;
+  if (id.startsWith('demo-') || id.startsWith('student-demo') || id.startsWith('std-179211')) return true;
+  if (username.startsWith('novocandidato') || name.includes('automatizado') || name.includes('candidato teste')) return true;
+
+  return false;
+}
+
 function serverDeduplicateProfiles(profiles: any[]): any[] {
   const map = new Map<string, any>();
   for (const p of profiles) {
-    if (!p || !p.username) continue;
+    if (!p || !p.username || isFictitiousUser(p)) continue;
     const key = p.username.trim().toLowerCase();
     const isSuper =
       p.id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
@@ -563,7 +625,7 @@ function serverDeduplicateProfiles(profiles: any[]): any[] {
 function serverDeduplicateRequests(requests: any[]): any[] {
   const map = new Map<string, any>();
   for (const r of requests) {
-    if (!r || !r.username) continue;
+    if (!r || !r.username || isFictitiousUser(r)) continue;
     const key = r.username.trim().toLowerCase();
     const existing = map.get(key);
     if (!existing) {
@@ -626,7 +688,7 @@ app.get('/api/db/state', async (req, res) => {
 
     // Laura Cristina Brito é sempre aprovada
     const cleanUser = p.username.toLowerCase().trim();
-    if (cleanUser === 'lauracristina' || cleanUser === 'laurateste357') {
+    if (cleanUser === 'lauracristina') {
       if (p.account_status !== 'aprovada') {
         p.account_status = 'aprovada';
         p.updated_at = new Date().toISOString();
@@ -701,8 +763,9 @@ app.get('/api/db/state', async (req, res) => {
     }
   }
 
-  db.profiles = serverDeduplicateProfiles(db.profiles);
-  db.accessRequests = serverDeduplicateRequests(db.accessRequests);
+  db.profiles = serverDeduplicateProfiles(db.profiles).filter((p: any) => !isFictitiousUser(p));
+  db.accessRequests = serverDeduplicateRequests(db.accessRequests).filter((r: any) => !isFictitiousUser(r));
+  db.credentials = (db.credentials || []).filter((c: any) => !isFictitiousUser(c));
 
   saveServerDb(db);
 
@@ -725,6 +788,10 @@ app.post('/api/db/register', async (req, res) => {
 
     const db = loadServerDb();
     const cleanUsername = data.username.toLowerCase().trim();
+
+    if (isFictitiousUser({ username: cleanUsername, email: data.email, full_name: data.fullName, id: data.newUserId })) {
+      return res.status(400).json({ error: 'Cadastro de usuário fictício ou de teste bloqueado.' });
+    }
 
     if (db.profiles.some((p: any) => p.username.toLowerCase() === cleanUsername)) {
       return res.status(400).json({ error: `O nome de usuário "${data.username}" já está cadastrado.` });
@@ -866,6 +933,112 @@ app.post('/api/db/register', async (req, res) => {
   } catch (err: any) {
     console.error('Erro na rota /api/db/register:', err);
     return res.status(500).json({ error: err.message || 'Erro no servidor ao registrar aluno' });
+  }
+});
+
+// 4.2.1 Atualização de dados cadastrais do perfil do estudante e responsável
+app.post('/api/db/update-profile', async (req, res) => {
+  try {
+    const { userId, username, fullName, avatarUrl, guardianName, guardianPhone, guardianCpf, email } = req.body;
+    if (!userId && !username) {
+      return res.status(400).json({ error: 'Identificador do usuário obrigatório.' });
+    }
+
+    const db = loadServerDb();
+    const cleanUser = String(username || '').trim().toLowerCase();
+    const cleanId = String(userId || '').trim().toLowerCase();
+
+    let targetProfile = db.profiles.find(
+      (p: any) =>
+        (cleanId && p.id && p.id.toLowerCase() === cleanId) ||
+        (cleanUser && p.username && p.username.toLowerCase() === cleanUser)
+    );
+
+    if (targetProfile) {
+      if (fullName !== undefined) targetProfile.full_name = String(fullName).trim();
+      if (avatarUrl !== undefined) targetProfile.avatar_url = avatarUrl;
+      if (guardianName !== undefined) targetProfile.guardian_name = String(guardianName).trim();
+      if (guardianPhone !== undefined) targetProfile.guardian_phone = String(guardianPhone).trim();
+      if (guardianCpf !== undefined) targetProfile.guardian_cpf = String(guardianCpf).trim();
+      if (email !== undefined) targetProfile.email = String(email).trim();
+      targetProfile.updated_at = new Date().toISOString();
+    }
+
+    // Atualiza todas as solicitações de acesso correspondentes no banco central
+    for (const r of db.accessRequests) {
+      if (
+        (cleanUser && r.username && r.username.toLowerCase() === cleanUser) ||
+        (cleanId && r.user_id && r.user_id.toLowerCase() === cleanId) ||
+        (targetProfile && r.user_id && r.user_id === targetProfile.id)
+      ) {
+        if (guardianName !== undefined) r.guardian_name = String(guardianName).trim();
+        if (guardianPhone !== undefined) r.guardian_phone = String(guardianPhone).trim();
+      }
+    }
+
+    db.profiles = serverDeduplicateProfiles(db.profiles);
+    db.accessRequests = serverDeduplicateRequests(db.accessRequests);
+    saveServerDb(db);
+
+    // Se Supabase com service_role estiver ativo, atualiza imediatamente na nuvem
+    if (supabaseServerClient) {
+      try {
+        const queryUser = cleanUser || targetProfile?.username;
+        const queryId = targetProfile?.id || cleanId;
+        const isValidUuid = (val: string) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+        const updateData: any = {
+          updated_at: new Date().toISOString(),
+        };
+        if (fullName !== undefined) updateData.full_name = String(fullName).trim();
+        if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl;
+        if (guardianName !== undefined) updateData.guardian_name = String(guardianName).trim();
+        if (guardianPhone !== undefined) updateData.guardian_phone = String(guardianPhone).trim();
+        if (guardianCpf !== undefined) updateData.guardian_cpf = String(guardianCpf).trim();
+        if (email !== undefined) updateData.email = String(email).trim();
+
+        if (queryUser) {
+          await supabaseServerClient
+            .from('profiles')
+            .update(updateData)
+            .ilike('username', queryUser);
+
+          await supabaseServerClient
+            .from('access_requests')
+            .update({
+              guardian_name: updateData.guardian_name,
+              guardian_phone: updateData.guardian_phone,
+            })
+            .ilike('username', queryUser);
+        }
+
+        if (isValidUuid(queryId)) {
+          await supabaseServerClient
+            .from('profiles')
+            .update(updateData)
+            .eq('id', queryId);
+
+          await supabaseServerClient
+            .from('access_requests')
+            .update({
+              guardian_name: updateData.guardian_name,
+              guardian_phone: updateData.guardian_phone,
+            })
+            .eq('user_id', queryId);
+        }
+      } catch (supaErr) {
+        console.warn('Erro ao atualizar perfil no Supabase via service_role:', supaErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      profile: targetProfile,
+    });
+  } catch (err: any) {
+    console.error('Erro na rota /api/db/update-profile:', err);
+    return res.status(500).json({ error: err.message || 'Erro ao atualizar perfil no servidor' });
   }
 });
 

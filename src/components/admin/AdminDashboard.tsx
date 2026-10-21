@@ -33,7 +33,7 @@ import {
   Eye,
   Filter,
 } from 'lucide-react';
-import { db, deduplicateProfiles, deduplicateRequests } from '../../lib/databaseEngine';
+import { db, deduplicateProfiles, deduplicateRequests, isFictitiousUser } from '../../lib/databaseEngine';
 import { testSupabaseConnection, isSupabaseConfigured, SupabaseConfigStatus } from '../../lib/supabase';
 import { SUPABASE_MIGRATION_SQL } from '../../lib/supabaseMigrationSql';
 
@@ -107,8 +107,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const loadAdminData = async (silent = false) => {
     if (!silent) setLoadingData(true);
     try {
-      const users = await db.getAllProfiles();
-      const reqs = await db.getAccessRequests();
+      const users = (await db.getAllProfiles()).filter((u) => !isFictitiousUser(u));
+      const reqs = (await db.getAccessRequests()).filter((r) => !isFictitiousUser(r));
       const logs = await db.getAuditLogs();
       const reps = await db.getReports();
       setAllUsers(deduplicateProfiles(users));
@@ -396,7 +396,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const filteredUsers = React.useMemo(() => {
-    const unique = deduplicateProfiles(allUsers);
+    const unique = deduplicateProfiles(allUsers).filter((u) => !isFictitiousUser(u));
     const q = searchQuery.toLowerCase().trim();
     if (!q) return unique;
     return unique.filter((u) => {
@@ -414,9 +414,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // 1. Processa solicitações de acesso da base oficial
     for (const r of requests) {
-      if (!r || !r.username) continue;
+      if (!r || !r.username || isFictitiousUser(r)) continue;
       const cleanUser = r.username.trim().toLowerCase();
-      const isLaura = cleanUser === 'lauracristina' || cleanUser === 'laurateste357';
+      const isLaura = cleanUser === 'lauracristina';
       if (isLaura) continue;
 
       if (seenUsernames.has(cleanUser)) continue;
@@ -447,11 +447,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // 2. Adiciona estudantes cadastrados que ainda não possuam registro explícito na tabela de solicitações
     for (const u of allUsers) {
-      if (!u || !u.username || u.role === 'superusuario') continue;
+      if (!u || !u.username || u.role === 'superusuario' || isFictitiousUser(u)) continue;
       const cleanUser = u.username.trim().toLowerCase();
       const isLaura =
         cleanUser === 'lauracristina' ||
-        cleanUser === 'laurateste357' ||
         (u.full_name && u.full_name.toLowerCase().includes('laura cristina'));
       if (isLaura) continue;
 

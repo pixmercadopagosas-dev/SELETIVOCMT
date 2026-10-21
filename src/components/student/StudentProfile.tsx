@@ -5,6 +5,8 @@ import {
   Shield,
   Save,
   CheckCircle2,
+  XCircle,
+  RefreshCw,
   GraduationCap,
   Calendar,
   Volume2,
@@ -32,6 +34,9 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   const [soundEnabled, setSoundEnabled] = useState(studyPreferences.sound_effects_enabled);
   const [saved, setSaved] = useState(false);
 
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const avatars = [
     { id: 'cadet_blue', label: 'Cadete Azul', color: 'bg-blue-900' },
     { id: 'cadet_green', label: 'Cadete Verde', color: 'bg-emerald-800' },
@@ -42,24 +47,35 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setSaveError(null);
 
-    const updatedUser: UserProfile = {
-      ...currentUser,
-      full_name: fullName.trim(),
-      avatar_url: avatar,
-      guardian_name: guardianName.trim(),
-      guardian_phone: guardianPhone.trim(),
-    };
+    try {
+      // 1. Atualiza e persiste de imediato no banco de dados (localStorage, servidor central e Supabase)
+      const updatedUser = await db.updateProfile(currentUser.id, {
+        full_name: fullName.trim(),
+        avatar_url: avatar,
+        guardian_name: guardianName.trim(),
+        guardian_phone: guardianPhone.trim(),
+      });
 
-    onUpdateUser(updatedUser);
+      // 2. Atualiza estado da aplicação imediatamente
+      onUpdateUser(updatedUser);
 
-    const updatedPref = await db.saveStudyPreferences(currentUser.id, {
-      sound_effects_enabled: soundEnabled,
-    });
-    onUpdatePreferences(updatedPref);
+      // 3. Salva preferências de estudo
+      const updatedPref = await db.saveStudyPreferences(currentUser.id, {
+        sound_effects_enabled: soundEnabled,
+      });
+      onUpdatePreferences(updatedPref);
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3500);
+    } catch (err: any) {
+      console.error('Erro ao salvar perfil no banco:', err);
+      setSaveError(err.message || 'Falha ao salvar dados cadastrais no banco de dados.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -213,20 +229,32 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           </button>
         </div>
 
+        {saveError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs font-bold flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        )}
+
         {saved && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Dados atualizados com sucesso!
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Dados atualizados com sucesso no banco de dados e no sistema!</span>
           </div>
         )}
 
         <div className="pt-4 border-t border-slate-100 flex justify-end">
           <button
             type="submit"
-            className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all inline-flex items-center gap-2"
+            disabled={saving}
+            className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-60 text-white rounded-xl text-xs font-bold shadow-sm transition-all inline-flex items-center gap-2 cursor-pointer"
           >
-            <Save className="w-4 h-4" />
-            <span>Salvar Alterações</span>
+            {saving ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{saving ? 'Salvando no Banco...' : 'Salvar Alterações'}</span>
           </button>
         </div>
       </form>

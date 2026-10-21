@@ -104,10 +104,70 @@ function safeStorageSet<T>(key: string, value: T): void {
   }
 }
 
+const FICTITIOUS_EXACT_USERNAMES = new Set([
+  'candidato_teste',
+  'laurateste357',
+  'candidato657687',
+  'novocandidato2026',
+  'teste_auditoria_99',
+  'teste_bruna_check',
+  'aluno_teste_validacao',
+  'aluno_teste_rejeitado',
+  'cadete_marcos',
+  'anabeatriz_balsas',
+  'gabriel_novato',
+  'candidato_demo',
+]);
+
+export function isFictitiousUser(user?: { id?: string; user_id?: string; username?: string; email?: string; full_name?: string } | null): boolean {
+  if (!user) return true;
+  const username = (user.username || '').toLowerCase().trim();
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.full_name || '').toLowerCase().trim();
+  const id = (user.id || user.user_id || '').toLowerCase().trim();
+
+  // CONTAS REAIS OFICIAIS PRESERVADAS
+  // 1. Superusuário Diretoria CMT XVII
+  if (
+    username === 'diretoria_cmt' ||
+    id === 'super-admin-001' ||
+    id === '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22' ||
+    email === 'pixmercadopagosas@gmail.com'
+  ) {
+    return false;
+  }
+
+  // 2. Laura Cristina Brito
+  if (
+    username === 'lauracristina' ||
+    id === '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a' ||
+    email === 'lauracristina@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  // 3. Bruna Ferreira
+  if (
+    username === 'bruna' ||
+    id === '8771b727-3d5e-47cb-b3a6-6db0abea8dc5' ||
+    email === 'bruna@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  // PADRÕES DE DADOS FICTÍCIOS / TESTES QUE DEVEM SER REMOVIDOS
+  if (FICTITIOUS_EXACT_USERNAMES.has(username)) return true;
+  if (username.includes('teste') || email.includes('teste') || name.includes('teste')) return true;
+  if (id.startsWith('demo-') || id.startsWith('student-demo') || id.startsWith('std-179211')) return true;
+  if (username.startsWith('novocandidato') || name.includes('automatizado') || name.includes('candidato teste')) return true;
+
+  return false;
+}
+
 export function deduplicateProfiles(profiles: UserProfile[]): UserProfile[] {
   const map = new Map<string, UserProfile>();
   for (const p of profiles) {
-    if (!p || !p.username) continue;
+    if (!p || !p.username || isFictitiousUser(p)) continue;
     const key = p.username.trim().toLowerCase();
     const isSuper =
       p.id === ROOT_SUPERADMIN.id ||
@@ -155,7 +215,7 @@ export function deduplicateProfiles(profiles: UserProfile[]): UserProfile[] {
 export function deduplicateRequests(requests: AccessRequest[]): AccessRequest[] {
   const map = new Map<string, AccessRequest>();
   for (const r of requests) {
-    if (!r || !r.username) continue;
+    if (!r || !r.username || isFictitiousUser(r)) continue;
     const key = r.username.trim().toLowerCase();
     const existing = map.get(key);
     if (!existing) {
@@ -253,15 +313,15 @@ class DatabaseEngine {
   }
 
   public reloadFromStorage() {
-    const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
+    const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []).filter((p) => !isFictitiousUser(p));
     if (storedProfiles.length > 0) {
-      this.profiles = storedProfiles;
+      this.profiles = deduplicateProfiles(storedProfiles);
     }
-    const storedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []);
+    const storedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter((r) => !isFictitiousUser(r));
     if (storedRequests.length > 0) {
-      this.accessRequests = storedRequests;
+      this.accessRequests = deduplicateRequests(storedRequests);
     }
-    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []);
+    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []).filter((c) => !isFictitiousUser(c));
     if (storedCredentials.length > 0) {
       this.credentials = storedCredentials;
     }
@@ -279,28 +339,19 @@ class DatabaseEngine {
         const data = await res.json();
         if (data && data.success) {
           if (Array.isArray(data.profiles) && data.profiles.length > 0) {
-            this.profiles = deduplicateProfiles([...this.profiles, ...data.profiles]);
+            const clean = data.profiles.filter((p: any) => !isFictitiousUser(p));
+            this.profiles = deduplicateProfiles(clean);
             safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
           }
 
           if (Array.isArray(data.accessRequests) && data.accessRequests.length > 0) {
-            this.accessRequests = deduplicateRequests([...this.accessRequests, ...data.accessRequests]);
+            const clean = data.accessRequests.filter((r: any) => !isFictitiousUser(r));
+            this.accessRequests = deduplicateRequests(clean);
             safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
           }
 
           if (Array.isArray(data.credentials) && data.credentials.length > 0) {
-            for (const cr of data.credentials) {
-              const idx = this.credentials.findIndex(
-                (c) =>
-                  c.userId === cr.userId ||
-                  (c.username && cr.username && c.username.toLowerCase() === cr.username.toLowerCase())
-              );
-              if (idx >= 0) {
-                this.credentials[idx] = { ...this.credentials[idx], ...cr };
-              } else {
-                this.credentials.push(cr);
-              }
-            }
+            this.credentials = data.credentials.filter((c: any) => !isFictitiousUser(c));
             this.persistCredentials();
           }
 
@@ -311,7 +362,7 @@ class DatabaseEngine {
 
           // Envia perfis pendentes locais para o servidor caso ainda não existam no servidor
           const localPending = this.profiles.filter(
-            (p) => p.role === 'estudante' && p.account_status === 'pendente' && p.username
+            (p) => p.role === 'estudante' && p.account_status === 'pendente' && p.username && !isFictitiousUser(p)
           );
           for (const lp of localPending) {
             const onServer = Array.isArray(data.profiles) && data.profiles.some(
@@ -343,13 +394,9 @@ class DatabaseEngine {
   }
 
   private initDatabase() {
-    // Carrega dados reais persistidos localmente (sem alunos fictícios)
+    // Carrega apenas dados reais persistidos localmente (filtra qualquer usuário fictício/teste)
     const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
-    
-    // Garante que o Superusuário sempre existe e filtra qualquer resquício de dados demo
-    const cleanProfiles = storedProfiles.filter(
-      (p) => !p.id.startsWith('student-demo') && p.username !== 'cadete_marcos' && p.username !== 'anabeatriz_balsas'
-    );
+    const cleanProfiles = storedProfiles.filter((p) => !isFictitiousUser(p));
 
     // Garante que a conta oficial do Superusuário sempre existe com privilégios totais
     const rootIdx = cleanProfiles.findIndex(
@@ -391,7 +438,7 @@ class DatabaseEngine {
     // Garante que Laura Cristina Brito esteja sempre como aprovada
     for (const p of cleanProfiles) {
       if (
-        (p.username && (p.username.toLowerCase() === 'lauracristina' || p.username.toLowerCase() === 'laurateste357')) ||
+        (p.username && p.username.toLowerCase() === 'lauracristina') ||
         (p.full_name && p.full_name.toLowerCase().includes('laura cristina'))
       ) {
         p.account_status = 'aprovada';
@@ -399,9 +446,10 @@ class DatabaseEngine {
     }
 
     this.profiles = deduplicateProfiles(cleanProfiles);
+    safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
 
     // Inicializa credenciais do banco de dados (com a senha oficial do Superusuário Ojf6994#)
-    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []);
+    const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []).filter((c) => !isFictitiousUser(c));
     let superCred = storedCredentials.find(
       (c) => c.userId === ROOT_SUPERADMIN.id || c.email === 'pixmercadopagosas@gmail.com'
     );
@@ -417,20 +465,19 @@ class DatabaseEngine {
       }
     }
     this.credentials = storedCredentials;
+    safeStorageSet(STORAGE_KEYS.CREDENTIALS, this.credentials);
     this.recoveryRequests = safeStorageGet<PasswordRecoveryRequest[]>(STORAGE_KEYS.RECOVERY_REQUESTS, []);
 
     const loadedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
-      (r) => !r.id.startsWith('demo-') && r.username !== 'gabriel_novato'
+      (r) => !isFictitiousUser(r)
     );
     for (const r of loadedRequests) {
-      if (
-        r.username &&
-        (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357')
-      ) {
+      if (r.username && r.username.toLowerCase() === 'lauracristina') {
         r.status = 'aprovado';
       }
     }
     this.accessRequests = deduplicateRequests(loadedRequests);
+    safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
 
     this.lessonProgress = safeStorageGet<LessonProgress[]>(STORAGE_KEYS.LESSON_PROGRESS, []);
     this.questionAttempts = safeStorageGet<QuestionAttempt[]>(STORAGE_KEYS.QUESTION_ATTEMPTS, []);
@@ -498,13 +545,15 @@ class DatabaseEngine {
     try {
       const { data: remoteProfiles } = await supabase.from('profiles').select('*');
       if (remoteProfiles && remoteProfiles.length > 0) {
-        this.profiles = deduplicateProfiles([...this.profiles, ...(remoteProfiles as UserProfile[])]);
+        const cleanProfiles = (remoteProfiles as UserProfile[]).filter((p) => !isFictitiousUser(p));
+        this.profiles = deduplicateProfiles([...this.profiles, ...cleanProfiles]);
         safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
       }
 
       const { data: remoteRequests } = await supabase.from('access_requests').select('*');
       if (remoteRequests && remoteRequests.length > 0) {
-        this.accessRequests = deduplicateRequests([...this.accessRequests, ...(remoteRequests as AccessRequest[])]);
+        const cleanRequests = (remoteRequests as AccessRequest[]).filter((r) => !isFictitiousUser(r));
+        this.accessRequests = deduplicateRequests([...this.accessRequests, ...cleanRequests]);
         safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
       }
     } catch (e) {
@@ -619,9 +668,9 @@ class DatabaseEngine {
   }
 
   async getAllProfiles(): Promise<UserProfile[]> {
-    // 1. Recarrega do armazenamento local
-    const stored = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
-    this.profiles = deduplicateProfiles([...this.profiles, ...stored]);
+    // 1. Recarrega do armazenamento local (filtra qualquer fictício)
+    const stored = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []).filter((p) => !isFictitiousUser(p));
+    this.profiles = deduplicateProfiles(stored);
 
     // 2. Sincroniza com servidor central se disponível
     await this.syncWithServer();
@@ -631,7 +680,8 @@ class DatabaseEngine {
       try {
         const { data } = await supabase.from('profiles').select('*');
         if (data && data.length > 0) {
-          this.profiles = deduplicateProfiles([...this.profiles, ...(data as UserProfile[])]);
+          const cleanProfiles = (data as UserProfile[]).filter((p) => !isFictitiousUser(p));
+          this.profiles = deduplicateProfiles([...this.profiles, ...cleanProfiles]);
         }
       } catch (e) {
         console.warn('Erro ao listar perfis do Supabase:', e);
@@ -650,10 +700,126 @@ class DatabaseEngine {
         account_status: 'aprovada',
       };
     }
-    this.profiles = deduplicateProfiles(this.profiles);
+    this.profiles = deduplicateProfiles(this.profiles.filter((p) => !isFictitiousUser(p)));
     safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
 
     return [...this.profiles];
+  }
+
+  // -------------------------------------------------------------
+  // ATUALIZAÇÃO DE PERFIL COM PERSISTÊNCIA IMEDIATA NO BANCO
+  // -------------------------------------------------------------
+  async updateProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+    const cleanId = (userId || '').trim().toLowerCase();
+
+    // 1. Localiza o perfil na memória
+    let profile = this.profiles.find(
+      (p) =>
+        p.id.toLowerCase() === cleanId ||
+        (p.username && p.username.toLowerCase() === cleanId)
+    );
+
+    if (!profile) {
+      throw new Error(`Perfil com identificador "${userId}" não encontrado.`);
+    }
+
+    const cleanUsername = profile.username.toLowerCase();
+
+    // 2. Aplica as alterações no perfil
+    if (data.full_name !== undefined) profile.full_name = data.full_name.trim();
+    if (data.avatar_url !== undefined) profile.avatar_url = data.avatar_url;
+    if (data.guardian_name !== undefined) profile.guardian_name = data.guardian_name.trim();
+    if (data.guardian_phone !== undefined) profile.guardian_phone = data.guardian_phone.trim();
+    if (data.guardian_cpf !== undefined) profile.guardian_cpf = data.guardian_cpf.trim();
+    if (data.email !== undefined) profile.email = data.email.trim();
+    profile.updated_at = new Date().toISOString();
+
+    // Atualiza cópias correspondentes em this.profiles
+    for (const p of this.profiles) {
+      if (
+        p.id.toLowerCase() === cleanId ||
+        (p.username && p.username.toLowerCase() === cleanUsername)
+      ) {
+        if (data.full_name !== undefined) p.full_name = profile.full_name;
+        if (data.avatar_url !== undefined) p.avatar_url = profile.avatar_url;
+        if (data.guardian_name !== undefined) p.guardian_name = profile.guardian_name;
+        if (data.guardian_phone !== undefined) p.guardian_phone = profile.guardian_phone;
+        if (data.guardian_cpf !== undefined) p.guardian_cpf = profile.guardian_cpf;
+        if (data.email !== undefined) p.email = profile.email;
+        p.updated_at = profile.updated_at;
+      }
+    }
+
+    // 3. Atualiza os dados nas solicitações de acesso correspondentes (para o Superusuário ver o novo responsável e fone)
+    for (const r of this.accessRequests) {
+      if (
+        (r.username && r.username.toLowerCase() === cleanUsername) ||
+        r.user_id.toLowerCase() === cleanId ||
+        r.user_id.toLowerCase() === profile.id.toLowerCase()
+      ) {
+        if (data.guardian_name !== undefined) r.guardian_name = profile.guardian_name;
+        if (data.guardian_phone !== undefined) r.guardian_phone = profile.guardian_phone;
+        if (data.guardian_cpf !== undefined) r.guardian_cpf = profile.guardian_cpf;
+      }
+    }
+
+    // 4. Salva no armazenamento local (localStorage)
+    this.profiles = deduplicateProfiles(this.profiles);
+    this.accessRequests = deduplicateRequests(this.accessRequests);
+    this.persistAll();
+
+    // 5. Salva no servidor central (/api/db/update-profile)
+    try {
+      await fetch('/api/db/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          username: profile.username,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url,
+          guardianName: profile.guardian_name,
+          guardianPhone: profile.guardian_phone,
+          guardianCpf: profile.guardian_cpf,
+          email: profile.email,
+        }),
+      });
+    } catch (err) {
+      console.warn('Erro ao sincronizar atualização de perfil com servidor:', err);
+    }
+
+    // 6. Atualiza diretamente no Supabase se disponível no cliente
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            guardian_name: profile.guardian_name,
+            guardian_phone: profile.guardian_phone,
+            guardian_cpf: profile.guardian_cpf || '',
+            email: profile.email,
+            updated_at: new Date().toISOString(),
+          })
+          .or(`id.eq.${profile.id},username.ilike.${cleanUsername}`);
+
+        await supabase
+          .from('access_requests')
+          .update({
+            guardian_name: profile.guardian_name,
+            guardian_phone: profile.guardian_phone,
+          })
+          .or(`user_id.eq.${profile.id},username.ilike.${cleanUsername}`);
+      } catch (e) {
+        console.warn('Erro ao atualizar perfil no Supabase:', e);
+      }
+    }
+
+    // 7. Notifica outros componentes e abas
+    this.broadcastChange('PROFILE_UPDATE', { userId: profile.id, profile });
+
+    return { ...profile };
   }
 
   // -------------------------------------------------------------
@@ -1236,9 +1402,9 @@ class DatabaseEngine {
   }
 
   async getAccessRequests(): Promise<AccessRequest[]> {
-    // 1. Recarrega do armazenamento local
-    const storedReqs = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []);
-    this.accessRequests = deduplicateRequests([...this.accessRequests, ...storedReqs]);
+    // 1. Recarrega do armazenamento local (apenas solicitações reais)
+    const storedReqs = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter((r) => !isFictitiousUser(r));
+    this.accessRequests = deduplicateRequests(storedReqs);
 
     // 2. Sincroniza com o servidor central
     await this.syncWithServer();
@@ -1248,7 +1414,8 @@ class DatabaseEngine {
       try {
         const { data } = await supabase.from('access_requests').select('*');
         if (data && data.length > 0) {
-          this.accessRequests = deduplicateRequests([...this.accessRequests, ...(data as AccessRequest[])]);
+          const cleanRemote = (data as AccessRequest[]).filter((r) => !isFictitiousUser(r));
+          this.accessRequests = deduplicateRequests([...this.accessRequests, ...cleanRemote]);
         }
       } catch (e) {
         console.warn('Erro ao buscar solicitações do Supabase:', e);
@@ -1257,22 +1424,18 @@ class DatabaseEngine {
 
     // 4. Garante que solicitações de Laura Cristina estejam sempre como aprovadas
     for (const r of this.accessRequests) {
-      if (
-        r.username &&
-        (r.username.toLowerCase() === 'lauracristina' || r.username.toLowerCase() === 'laurateste357')
-      ) {
+      if (r.username && r.username.toLowerCase() === 'lauracristina') {
         r.status = 'aprovado';
       }
     }
 
     // 5. REGRA DE SEGURANÇA:
-    // Qualquer perfil com status "pendente" que ainda não conste nas solicitações (sem duplicar!)
+    // Qualquer perfil real com status "pendente" que ainda não conste nas solicitações (sem duplicar!)
     for (const p of this.profiles) {
-      if (p.role === 'superusuario') continue;
+      if (p.role === 'superusuario' || isFictitiousUser(p)) continue;
       const cleanUser = p.username.toLowerCase().trim();
       const isLaura =
         cleanUser === 'lauracristina' ||
-        cleanUser === 'laurateste357' ||
         (p.full_name && p.full_name.toLowerCase().includes('laura cristina'));
 
       if (isLaura) {
@@ -1306,7 +1469,7 @@ class DatabaseEngine {
     // 6. Alinhamento soberano: Se a conta foi aprovada (no perfil ou na solicitação), a aprovação prevalece
     for (const r of this.accessRequests) {
       const cleanUser = r.username.toLowerCase().trim();
-      const isLaura = cleanUser === 'lauracristina' || cleanUser === 'laurateste357';
+      const isLaura = cleanUser === 'lauracristina';
 
       if (isLaura) {
         r.status = 'aprovado';
@@ -1333,8 +1496,8 @@ class DatabaseEngine {
       }
     }
 
-    this.accessRequests = deduplicateRequests(this.accessRequests);
-    this.profiles = deduplicateProfiles(this.profiles);
+    this.accessRequests = deduplicateRequests(this.accessRequests.filter((r) => !isFictitiousUser(r)));
+    this.profiles = deduplicateProfiles(this.profiles.filter((p) => !isFictitiousUser(p)));
     safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
     safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
     return [...this.accessRequests];

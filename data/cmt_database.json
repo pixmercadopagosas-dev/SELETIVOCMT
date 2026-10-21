@@ -20,44 +20,6 @@
       "updated_at": "2026-10-16T02:15:54.380534+00:00"
     },
     {
-      "id": "std-1792117405952",
-      "username": "candidato_teste",
-      "full_name": "Candidato Teste Silva",
-      "email": "teste@estudante.cmt.br",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "aprovada",
-      "role": "estudante",
-      "guardian_name": "Pai Teste",
-      "guardian_phone": "(99) 98888-7777",
-      "guardian_cpf": "",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-16T02:23:25.952Z",
-      "updated_at": "2026-10-17T01:55:45.767Z"
-    },
-    {
-      "id": "3b693e25-9a78-43b0-8c77-61e87de21d57",
-      "username": "laurateste357",
-      "full_name": "Laura Cristina Brito",
-      "email": "laura.teste.1792116909745@gmail.com",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "aprovada",
-      "role": "estudante",
-      "guardian_name": "Mae da Laura",
-      "guardian_phone": "(99) 99999-9999",
-      "guardian_cpf": null,
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-16T02:15:09.977857+00:00",
-      "updated_at": "2026-10-18T01:53:18.989+00:00"
-    },
-    {
       "id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
       "username": "lauracristina",
       "full_name": "LAURA CRISTINA BRITO",
@@ -77,44 +39,6 @@
       "updated_at": "2026-10-17T02:06:43.429+00:00"
     },
     {
-      "id": "036bef3e-39d0-4211-9b10-8f03c99533f7",
-      "username": "candidato657687",
-      "full_name": "Candidato Teste Automatizado",
-      "email": "candidato657687@gmail.com",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "pendente",
-      "role": "estudante",
-      "guardian_name": "",
-      "guardian_phone": "",
-      "guardian_cpf": null,
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-17T01:47:38.078836+00:00",
-      "updated_at": "2026-10-17T01:47:38.078836+00:00"
-    },
-    {
-      "id": "ffbdacce-a4df-4a1e-b038-99e136217ec6",
-      "username": "novocandidato2026",
-      "full_name": "Novo Candidato 2026",
-      "email": "novocandidato2026@estudante.cmt.br",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "aprovada",
-      "role": "estudante",
-      "guardian_name": "Mae do Candidato",
-      "guardian_phone": "(99) 98888-1234",
-      "guardian_cpf": "",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-18T02:23:06.5696+00:00",
-      "updated_at": "2026-10-19T02:43:19.37+00:00"
-    },
-    {
       "id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
       "username": "bruna",
       "full_name": "Bruna Ferreira",
@@ -132,82 +56,6 @@
       "study_streak_days": 0,
       "created_at": "2026-10-19T03:32:18.755849+00:00",
       "updated_at": "2026-10-20T00:52:52.814+00:00"
-    },
-    {
-      "id": "86ba0ebd-5393-4017-8430-e69a6875c09c",
-      "username": "teste_auditoria_99",
-      "full_name": "Aluno Teste Auditoria",
-      "email": "teste_auditoria_99@estudante.cmt.br",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "pendente",
-      "role": "estudante",
-      "guardian_name": "Pai Auditor",
-      "guardian_phone": "(99) 98888-9999",
-      "guardian_cpf": "",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-19T23:49:52.249254+00:00",
-      "updated_at": "2026-10-19T23:49:52.249254+00:00"
-    },
-    {
-      "id": "ffe0f9c3-7740-4100-ba68-eb4b1d144ce9",
-      "username": "teste_bruna_check",
-      "full_name": "Bruna Teste",
-      "email": "teste_bruna_check@estudante.cmt.br",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "pendente",
-      "role": "estudante",
-      "guardian_name": "Mae Bruna",
-      "guardian_phone": "(99) 99999-9999",
-      "guardian_cpf": "",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-19T23:49:52.266699+00:00",
-      "updated_at": "2026-10-19T23:49:52.266699+00:00"
-    },
-    {
-      "id": "b620fae0-fa97-4305-8b37-db004960e683",
-      "username": "aluno_teste_validacao",
-      "full_name": "Aluno de Teste Validação",
-      "email": "aluno_teste_val@estudante.cmt.br",
-      "grade": "6_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "aprovada",
-      "role": "estudante",
-      "guardian_name": "Pai Validador",
-      "guardian_phone": "(99) 98765-4321",
-      "guardian_cpf": "123.456.789-00",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-19T23:57:08.870074+00:00",
-      "updated_at": "2026-10-19T23:57:10.806+00:00"
-    },
-    {
-      "id": "0cd93981-830f-4b11-ad8a-3e05aa486c5d",
-      "username": "aluno_teste_rejeitado",
-      "full_name": "Aluno Teste Rejeitado",
-      "email": "aluno_teste_rejeitado@estudante.cmt.br",
-      "grade": "7_ano",
-      "avatar_url": "cadet_blue",
-      "account_status": "bloqueada",
-      "role": "estudante",
-      "guardian_name": "Responsavel X",
-      "guardian_phone": "(99) 91111-2222",
-      "guardian_cpf": "",
-      "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
-      "created_at": "2026-10-19T23:57:12.036807+00:00",
-      "updated_at": "2026-10-19T23:57:12.812+00:00"
     }
   ],
   "accessRequests": [
@@ -225,32 +73,6 @@
       "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
     },
     {
-      "id": "req-1792117405952",
-      "user_id": "std-1792117405952",
-      "username": "candidato_teste",
-      "grade": "6_ano",
-      "guardian_name": "Pai Teste",
-      "guardian_phone": "(99) 98888-7777",
-      "requested_at": "2026-10-16T02:23:25.952Z",
-      "status": "aprovado",
-      "reviewed_at": "2026-10-17T01:55:45.767Z",
-      "reviewed_by": "super-admin-001",
-      "rejection_reason": "Aprovado no teste de auditoria"
-    },
-    {
-      "id": "57d3c241-5042-43eb-a6b5-bf602dfed3c0",
-      "user_id": "3b693e25-9a78-43b0-8c77-61e87de21d57",
-      "username": "laurateste357",
-      "grade": "6_ano",
-      "guardian_name": null,
-      "guardian_phone": null,
-      "requested_at": "2026-10-16T02:15:21.472705+00:00",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "status": "aprovado",
-      "rejection_reason": null
-    },
-    {
       "id": "013853bd-cd7a-49ee-ba7d-ecf9fb8aa6ed",
       "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
       "username": "lauracristina",
@@ -258,87 +80,9 @@
       "guardian_name": "Responsável Laura",
       "guardian_phone": "(99) 99113-6329",
       "requested_at": "2026-10-16T02:16:56.745+00:00",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "status": "aprovado",
-      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
-    },
-    {
-      "id": "5f153c0e-7323-4282-9fbf-39e7ac678879",
-      "user_id": "036bef3e-39d0-4211-9b10-8f03c99533f7",
-      "username": "candidato657687",
-      "grade": "6_ano",
-      "guardian_name": "Responsável Teste",
-      "guardian_phone": "(99) 99113-6329",
-      "requested_at": "2026-10-17T01:48:24.281+00:00",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "status": "pendente",
-      "rejection_reason": null
-    },
-    {
-      "id": "dadfed35-b2ab-4272-bd1b-f584706ac235",
-      "user_id": "ffbdacce-a4df-4a1e-b038-99e136217ec6",
-      "username": "novocandidato2026",
-      "grade": "6_ano",
-      "guardian_name": "Mae do Candidato",
-      "guardian_phone": "(99) 98888-1234",
-      "requested_at": "2026-10-18T02:23:06.956+00:00",
-      "reviewed_at": "2026-10-19T02:43:19.947+00:00",
+      "reviewed_at": "2026-10-21T03:45:26.154+00:00",
       "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
       "status": "aprovado",
-      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
-    },
-    {
-      "id": "cf718515-3e69-443b-9abf-d653664d9d7e",
-      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
-      "username": "bruna",
-      "grade": "6_ano",
-      "guardian_name": "Manoel Ferreira",
-      "guardian_phone": "(99) 98111-2233",
-      "requested_at": "2026-10-20T00:45:44.586+00:00",
-      "reviewed_at": "2026-10-20T00:52:53.036+00:00",
-      "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
-      "status": "aprovado",
-      "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
-    },
-    {
-      "id": "ef21819e-d893-4585-a378-d53430f7cf59",
-      "user_id": "86ba0ebd-5393-4017-8430-e69a6875c09c",
-      "username": "teste_auditoria_99",
-      "grade": "6_ano",
-      "guardian_name": "Pai Auditor",
-      "guardian_phone": "(99) 98888-9999",
-      "requested_at": "2026-10-19T23:49:52.901+00:00",
-      "status": "pendente",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "rejection_reason": null
-    },
-    {
-      "id": "2e832c9c-72d2-4843-ad71-14b4fd210d55",
-      "user_id": "ffe0f9c3-7740-4100-ba68-eb4b1d144ce9",
-      "username": "teste_bruna_check",
-      "grade": "6_ano",
-      "guardian_name": "Mae Bruna",
-      "guardian_phone": "(99) 99999-9999",
-      "requested_at": "2026-10-19T23:49:52.882+00:00",
-      "reviewed_at": null,
-      "reviewed_by": null,
-      "status": "pendente",
-      "rejection_reason": null
-    },
-    {
-      "id": "c1bac9f4-eb65-435e-a161-0b16ac4aa2a8",
-      "user_id": "b620fae0-fa97-4305-8b37-db004960e683",
-      "username": "aluno_teste_validacao",
-      "grade": "6_ano",
-      "guardian_name": "Pai Validador",
-      "guardian_phone": "(99) 98765-4321",
-      "requested_at": "2026-10-19T23:57:09.188+00:00",
-      "status": "aprovado",
-      "reviewed_at": "2026-10-19T23:57:11.016+00:00",
-      "reviewed_by": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
       "rejection_reason": "Matrícula conferida e aprovada pela Diretoria"
     }
   ],
@@ -352,14 +96,6 @@
       "updatedAt": "2026-10-18T02:04:33.963Z"
     },
     {
-      "userId": "std-1792117405952",
-      "username": "candidato_teste",
-      "email": "teste@estudante.cmt.br",
-      "phone": "(99) 98888-7777",
-      "passwordHash": "senha123",
-      "updatedAt": "2026-10-16T02:23:25.952Z"
-    },
-    {
       "userId": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
       "username": "lauracristina",
       "email": "lauracristina@estudante.cmt.br",
@@ -368,196 +104,15 @@
       "updatedAt": "2026-10-17T02:06:43.429Z"
     },
     {
-      "userId": "86ba0ebd-5393-4017-8430-e69a6875c09c",
-      "username": "teste_auditoria_99",
-      "email": "teste_auditoria_99@estudante.cmt.br",
-      "phone": "(99) 98888-9999",
-      "passwordHash": "123456",
-      "updatedAt": "2026-10-19T23:49:53.558Z"
-    },
-    {
-      "userId": "b620fae0-fa97-4305-8b37-db004960e683",
-      "username": "aluno_teste_validacao",
-      "email": "aluno_teste_val@estudante.cmt.br",
-      "phone": "(99) 98765-4321",
-      "passwordHash": "senhaSegura123",
-      "updatedAt": "2026-10-19T23:57:09.426Z"
+      "userId": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "username": "bruna",
+      "email": "bruna@estudante.cmt.br",
+      "phone": "(99) 98111-2233",
+      "passwordHash": "senha123",
+      "updatedAt": "2026-10-21T03:45:35.279Z"
     }
   ],
   "auditLogs": [
-    {
-      "id": "aud-1792454235592",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "EXCLUSAO_SOLICITACAO_ACESSO",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "",
-      "details": {
-        "removidas": 1,
-        "perfilExcluido": true,
-        "data": "2026-10-19T23:57:15.592Z"
-      },
-      "created_at": "2026-10-19T23:57:15.592Z"
-    },
-    {
-      "id": "aud-1792454229426",
-      "admin_id": "sistema",
-      "admin_username": "cadastro_aluno",
-      "action": "NOVA_SOLICITACAO_MATRICULA",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "b620fae0-fa97-4305-8b37-db004960e683",
-      "details": {
-        "username": "aluno_teste_validacao",
-        "grade": "6_ano"
-      },
-      "created_at": "2026-10-19T23:57:09.426Z"
-    },
-    {
-      "id": "aud-1792453793558",
-      "admin_id": "sistema",
-      "admin_username": "cadastro_aluno",
-      "action": "NOVA_SOLICITACAO_MATRICULA",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "86ba0ebd-5393-4017-8430-e69a6875c09c",
-      "details": {
-        "username": "teste_auditoria_99",
-        "grade": "6_ano"
-      },
-      "created_at": "2026-10-19T23:49:53.558Z"
-    },
-    {
-      "id": "aud-1792381094047",
-      "admin_id": "sistema",
-      "admin_username": "cadastro_aluno",
-      "action": "NOVA_SOLICITACAO_MATRICULA",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "9d116a11-8039-4739-be6b-4e5e50c5353c",
-      "details": {
-        "username": "teste_auditoria_99",
-        "grade": "6_ano"
-      },
-      "created_at": "2026-10-19T03:38:14.047Z"
-    },
-    {
-      "id": "aud-1792377948243",
-      "admin_id": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
-      "admin_username": "diretoria_cmt",
-      "action": "EXCLUSAO_SOLICITACAO_ACESSO",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "64d9fa15-a373-4be4-965d-d3a5b80763ec",
-      "details": {
-        "removidas": 1,
-        "perfilExcluido": true,
-        "data": "2026-10-19T02:45:48.243Z"
-      },
-      "created_at": "2026-10-19T02:45:48.243Z"
-    },
-    {
-      "id": "aud-1792377858420",
-      "admin_id": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
-      "admin_username": "diretoria_cmt",
-      "action": "EXCLUSAO_SOLICITACAO_ACESSO",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "1945dd85-33b2-4dde-94b8-232f8ebec80d",
-      "details": {
-        "removidas": 1,
-        "perfilExcluido": true,
-        "data": "2026-10-19T02:44:18.420Z"
-      },
-      "created_at": "2026-10-19T02:44:18.420Z"
-    },
-    {
-      "id": "aud-1792289070992",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "EXCLUSAO_SOLICITACAO_ACESSO",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "5f153c0e-7323-4282-9fbf-39e7ac678879",
-      "details": {
-        "removidas": 1,
-        "perfilExcluido": true,
-        "data": "2026-10-18T02:04:30.992Z"
-      },
-      "created_at": "2026-10-18T02:04:30.992Z"
-    },
-    {
-      "id": "aud-1792289058674",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "ALTERACAO_STATUS_CONTA",
-      "target_entity": "USER_PROFILE",
-      "target_id": "candidato657687",
-      "details": {
-        "novo_status": "aprovada",
-        "motivo": "Aprovado no teste"
-      },
-      "created_at": "2026-10-18T02:04:18.674Z"
-    },
-    {
-      "id": "aud-1792202145767",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "ALTERACAO_STATUS_CONTA",
-      "target_entity": "USER_PROFILE",
-      "target_id": "candidato_teste",
-      "details": {
-        "novo_status": "aprovada",
-        "motivo": "Aprovado no teste de auditoria"
-      },
-      "created_at": "2026-10-17T01:55:45.767Z"
-    },
-    {
-      "id": "aud-1792202123178",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "ALTERACAO_STATUS_CONTA",
-      "target_entity": "USER_PROFILE",
-      "target_id": "candidato_teste",
-      "details": {
-        "novo_status": "aprovada",
-        "motivo": "Aprovado no teste de auditoria"
-      },
-      "created_at": "2026-10-17T01:55:23.178Z"
-    },
-    {
-      "id": "aud-1792168095573",
-      "admin_id": "38935c9c-1c8a-401a-8f14-eb2a7dfb7a22",
-      "admin_username": "diretoria_cmt",
-      "action": "ALTERACAO_STATUS_CONTA",
-      "target_entity": "USER_PROFILE",
-      "target_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
-      "details": {
-        "novo_status": "aprovada",
-        "motivo": "Matrícula conferida e aprovada pela Diretoria"
-      },
-      "created_at": "2026-10-16T16:28:15.573Z"
-    },
-    {
-      "id": "aud-1792117405952",
-      "admin_id": "sistema",
-      "admin_username": "cadastro_aluno",
-      "action": "NOVA_SOLICITACAO_MATRICULA",
-      "target_entity": "ACCESS_REQUEST",
-      "target_id": "std-1792117405952",
-      "details": {
-        "username": "candidato_teste",
-        "grade": "6_ano"
-      },
-      "created_at": "2026-10-16T02:23:25.952Z"
-    },
-    {
-      "id": "aud-1792116558998",
-      "admin_id": "super-admin-001",
-      "admin_username": "diretoria_cmt",
-      "action": "ALTERACAO_STATUS_CONTA",
-      "target_entity": "USER_PROFILE",
-      "target_id": "std-1792116547374",
-      "details": {
-        "novo_status": "aprovada",
-        "motivo": "Aprovado no teste"
-      },
-      "created_at": "2026-10-16T02:09:18.998Z"
-    },
     {
       "id": "aud-server-init",
       "admin_id": "super-admin-001",
