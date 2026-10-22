@@ -43,6 +43,7 @@ interface SidebarProps {
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   onSwitchToSuperUser?: () => void | Promise<void>;
+  onOpenOsaias?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -53,6 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile,
   onSwitchToSuperUser,
+  onOpenOsaias,
 }) => {
   const { currentCartoon, activeAlienProfile, activeTeenProfile } = useAppTheme();
 
@@ -218,6 +220,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           ) : null}
+
+          {/* Cartão de Acesso Rápido ao Instrutor Osaias */}
+          {userRole !== 'superusuario' && onOpenOsaias && (
+            <button
+              onClick={() => {
+                onOpenOsaias();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="w-full mt-3 p-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border border-amber-500/40 text-left flex items-center gap-2.5 shadow-xs hover:border-amber-400 hover:bg-amber-500/25 transition-all cursor-pointer group"
+              title="Ouvir mensagem e boas-vindas do Instrutor Osaias"
+            >
+              <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400 shrink-0 shadow-sm">
+                <img
+                  src="/assets/aistudio/1792634685275_25b5af36.jpg"
+                  alt="Osaias"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-black text-amber-300 block truncate group-hover:text-amber-200">
+                  Instrutor Osaias
+                </span>
+                <span className="text-[9px] text-slate-300 block truncate">
+                  Assistente Virtual • Mensagem
+                </span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Active Mascot in Sidebar */}

@@ -26,6 +26,7 @@ import { PendingApprovalView } from './components/auth/PendingApprovalView';
 import { SupabaseStatusModal } from './components/common/SupabaseStatusModal';
 import { ThemeSelectorModal } from './components/common/ThemeSelectorModal';
 import { ThemeCompanionWidget } from './components/common/ThemeCompanionWidget';
+import { WelcomeAvatarOsaias } from './components/common/WelcomeAvatarOsaias';
 import { LESSONS_DATA } from './data/curriculumData';
 import {
   GraduationCap,
@@ -70,6 +71,7 @@ function MainApp() {
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [supabaseModalOpen, setSupabaseModalOpen] = useState(false);
   const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [osaiasWelcomeOpen, setOsaiasWelcomeOpen] = useState(false);
 
   const { cartoonConfig } = useAppTheme();
 
@@ -119,6 +121,9 @@ function MainApp() {
       localStorage.setItem('cmt_current_user_id', user.id);
       if (user.role === 'superusuario') {
         setCurrentTab('admin');
+      } else if (user.role === 'estudante') {
+        // Dispara o avatar interativo de Osaias dando as boas-vindas
+        setOsaiasWelcomeOpen(true);
       }
       loadUserData(user.id);
     } else {
@@ -131,6 +136,7 @@ function MainApp() {
     localStorage.removeItem('cmt_current_user_id');
     setCurrentUser(null);
     setActiveLessonId(null);
+    setOsaiasWelcomeOpen(false);
     setCurrentTab('inicio');
   };
 
@@ -139,6 +145,9 @@ function MainApp() {
     setCurrentUser(user);
     if (user.role === 'superusuario') {
       setCurrentTab('admin');
+    } else if (user.role === 'estudante') {
+      // Dispara o avatar interativo de Osaias dando as boas-vindas
+      setOsaiasWelcomeOpen(true);
     }
     await loadUserData(user.id);
   };
@@ -146,6 +155,10 @@ function MainApp() {
   const handleRegisterSuccess = (user: UserProfile) => {
     localStorage.setItem('cmt_current_user_id', user.id);
     setCurrentUser(user);
+    if (user.role === 'estudante') {
+      // Dispara o avatar interativo de Osaias dando as boas-vindas
+      setOsaiasWelcomeOpen(true);
+    }
     loadUserData(user.id);
   };
 
@@ -255,6 +268,9 @@ function MainApp() {
           currentUser={currentUser}
           onStatusUpdated={(updated) => {
             setCurrentUser(updated);
+            if (updated.role === 'estudante') {
+              setOsaiasWelcomeOpen(true);
+            }
             loadUserData(updated.id);
           }}
           onLogout={handleLogout}
@@ -359,6 +375,18 @@ function MainApp() {
                 className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold rounded-xl border border-purple-200"
               >
                 🎨 Cores & Temas
+              </button>
+              <button
+                onClick={() => setOsaiasWelcomeOpen(true)}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl border border-amber-300 flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Conhecer o Assistente Virtual Osaias"
+              >
+                <img
+                  src="/assets/aistudio/1792634685275_25b5af36.jpg"
+                  alt="Osaias"
+                  className="w-4 h-4 rounded-full object-cover border border-slate-900"
+                />
+                <span className="hidden sm:inline">Instrutor Osaias</span>
               </button>
               <button
                 onClick={() => handleOpenLogin('pixmercadopagosas@gmail.com')}
@@ -477,6 +505,13 @@ function MainApp() {
           isOpen={themeModalOpen}
           onClose={() => setThemeModalOpen(false)}
         />
+
+        {/* Avatar Interativo de Boas-Vindas: Instrutor Osaias */}
+        <WelcomeAvatarOsaias
+          currentUser={currentUser}
+          isOpen={osaiasWelcomeOpen}
+          onClose={() => setOsaiasWelcomeOpen(false)}
+        />
       </div>
     );
   }
@@ -502,6 +537,7 @@ function MainApp() {
         onLogout={handleLogout}
         onSwitchUser={handleSwitchUser}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        onOpenOsaias={() => setOsaiasWelcomeOpen(true)}
       />
 
       {/* Interactive Theme Companion Banner (Ben 10 Omnitrix & Aliens, Teen Themes, etc.) */}
@@ -519,6 +555,7 @@ function MainApp() {
           onCloseMobile={() => setMobileMenuOpen(false)}
           onSwitchToSuperUser={() => handleSwitchUser('super-admin-001')}
           pendingRequestsCount={pendingRequestsCount}
+          onOpenOsaias={() => setOsaiasWelcomeOpen(true)}
         />
 
         <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
@@ -695,6 +732,13 @@ function MainApp() {
         currentUser={currentUser}
         currentTab={currentTab}
         onNavigateToAiTab={() => setCurrentTab('tutor-ia')}
+      />
+
+      {/* Avatar Interativo de Boas-Vindas: Instrutor Osaias */}
+      <WelcomeAvatarOsaias
+        currentUser={currentUser}
+        isOpen={osaiasWelcomeOpen}
+        onClose={() => setOsaiasWelcomeOpen(false)}
       />
     </div>
   );

@@ -29,6 +29,7 @@ interface NavbarProps {
   onLogout: () => void;
   onSwitchUser?: (userId: string) => void;
   onToggleMobileMenu?: () => void;
+  onOpenOsaias?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onSwitchUser,
   onToggleMobileMenu,
+  onOpenOsaias,
 }) => {
   const [showSwitchMenu, setShowSwitchMenu] = useState(false);
   const { currentCartoon, activeAlienProfile, activeTeenProfile, colorConfig } = useAppTheme();
@@ -118,6 +120,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" />
                 <span>{currentUser.total_stars}</span>
               </div>
+
+              {/* Botão Instrutor Osaias */}
+              {onOpenOsaias && (
+                <button
+                  onClick={onOpenOsaias}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-md border border-amber-300 transition-all transform hover:scale-105 active:scale-95"
+                  title="Falar com Instrutor Osaias (Assistente Virtual)"
+                >
+                  <img
+                    src="/assets/aistudio/1792634685275_25b5af36.jpg"
+                    alt="Osaias"
+                    className="w-5 h-5 rounded-full object-cover border border-slate-900 shadow-xs"
+                  />
+                  <span className="hidden sm:inline">Osaias</span>
+                </button>
+              )}
             </>
           )}
 
