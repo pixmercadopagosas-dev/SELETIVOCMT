@@ -41,12 +41,14 @@ interface AdminDashboardProps {
   currentAdmin: UserProfile;
   onRefreshData?: () => void;
   onNavigateToDbTab?: () => void;
+  onNavigateToPerformanceTab?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentAdmin,
   onRefreshData,
   onNavigateToDbTab,
+  onNavigateToPerformanceTab,
 }) => {
   const [activeTab, setActiveTab] = useState<'solicitacoes' | 'usuarios' | 'supabase' | 'questoes' | 'denuncias' | 'auditoria'>('solicitacoes');
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
@@ -1540,10 +1542,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              {onNavigateToPerformanceTab && (
+                <button
+                  onClick={() => {
+                    setInspectedUser(null);
+                    onNavigateToPerformanceTab();
+                  }}
+                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Abrir no Painel Geral de Desempenho</span>
+                </button>
+              )}
               <button
                 onClick={() => setInspectedUser(null)}
-                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800"
+                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 cursor-pointer"
               >
                 Fechar Dossiê
               </button>

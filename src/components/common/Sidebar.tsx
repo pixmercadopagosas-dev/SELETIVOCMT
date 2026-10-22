@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'matematica', label: 'Matemática', icon: Calculator },
     { id: 'questionarios', label: 'Questionários', icon: HelpCircle },
     { id: 'simulados', label: 'Simulados do CMT', icon: Clock },
-    { id: 'desempenho', label: 'Meu Desempenho', icon: TrendingUp },
+    { id: 'desempenho', label: userRole === 'superusuario' ? 'Desempenho dos Alunos' : 'Meu Desempenho', icon: TrendingUp },
     { id: 'conquistas', label: 'Conquistas & Medalhas', icon: Award },
     { id: 'comunidade', label: 'Comunidade Segura', icon: Users },
     { id: 'notificacoes', label: 'Notificações', icon: Bell },

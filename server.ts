@@ -417,6 +417,9 @@ interface ServerDbData {
   accessRequests: any[];
   credentials: any[];
   auditLogs: any[];
+  quizAttempts: any[];
+  questionAttempts: any[];
+  lessonProgress: any[];
 }
 
 function getInitialServerDb(): ServerDbData {
@@ -465,6 +468,9 @@ function getInitialServerDb(): ServerDbData {
         created_at: new Date().toISOString(),
       },
     ],
+    quizAttempts: [],
+    questionAttempts: [],
+    lessonProgress: [],
   };
 }
 
@@ -494,6 +500,9 @@ function loadServerDb(): ServerDbData {
       }
       if (!parsed.accessRequests) parsed.accessRequests = [];
       if (!parsed.auditLogs) parsed.auditLogs = [];
+      if (!parsed.quizAttempts) parsed.quizAttempts = [];
+      if (!parsed.questionAttempts) parsed.questionAttempts = [];
+      if (!parsed.lessonProgress) parsed.lessonProgress = [];
 
       parsed.profiles = (parsed.profiles || []).filter((p: any) => !isFictitiousUser(p));
       parsed.accessRequests = (parsed.accessRequests || []).filter((r: any) => !isFictitiousUser(r));
@@ -668,6 +677,37 @@ app.get('/api/db/state', async (req, res) => {
       if (supaReqs && supaReqs.length > 0) {
         db.accessRequests = serverDeduplicateRequests([...db.accessRequests, ...supaReqs]);
       }
+
+      const { data: supaQuizzes } = await supabaseServerClient.from('quiz_attempts').select('*');
+      if (supaQuizzes && supaQuizzes.length > 0) {
+        // Mescla simulados sem duplicar
+        const map = new Map<string, any>();
+        for (const q of [...(db.quizAttempts || []), ...supaQuizzes]) {
+          if (q && q.id) map.set(q.id, q);
+        }
+        db.quizAttempts = Array.from(map.values());
+      }
+
+      const { data: supaQuestions } = await supabaseServerClient.from('question_attempts').select('*');
+      if (supaQuestions && supaQuestions.length > 0) {
+        const map = new Map<string, any>();
+        for (const q of [...(db.questionAttempts || []), ...supaQuestions]) {
+          if (q && q.id) map.set(q.id, q);
+        }
+        db.questionAttempts = Array.from(map.values());
+      }
+
+      const { data: supaLessons } = await supabaseServerClient.from('lesson_progress').select('*');
+      if (supaLessons && supaLessons.length > 0) {
+        const map = new Map<string, any>();
+        for (const l of [...(db.lessonProgress || []), ...supaLessons]) {
+          if (l && (l.id || (l.user_id && l.lesson_id))) {
+            const key = l.id || `${l.user_id}_${l.lesson_id}`;
+            map.set(key, l);
+          }
+        }
+        db.lessonProgress = Array.from(map.values());
+      }
     } catch (err) {
       console.warn('Erro ao sincronizar com Supabase em /api/db/state:', err);
     }
@@ -775,6 +815,9 @@ app.get('/api/db/state', async (req, res) => {
     accessRequests: db.accessRequests,
     credentials: db.credentials,
     auditLogs: db.auditLogs,
+    quizAttempts: db.quizAttempts || [],
+    questionAttempts: db.questionAttempts || [],
+    lessonProgress: db.lessonProgress || [],
   });
 });
 
@@ -1398,6 +1441,130 @@ app.post('/api/db/sync', (req, res) => {
       credentials: db.credentials,
     });
   } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.6 Registrar Simulado Concluído pelo Estudante
+app.post('/api/db/record-quiz', async (req, res) => {
+  try {
+    const attempt = req.body;
+    if (!attempt || !attempt.user_id) {
+      return res.status(400).json({ error: 'Dados da tentativa de simulado inválidos' });
+    }
+    const db = loadServerDb();
+    if (!db.quizAttempts) db.quizAttempts = [];
+
+    // Remove tentativa anterior se mesmo ID
+    db.quizAttempts = db.quizAttempts.filter((q: any) => q.id !== attempt.id);
+    db.quizAttempts.unshift(attempt);
+
+    // Atualiza estrelas e pontos no perfil do estudante
+    const prof = db.profiles.find((p: any) => p.id === attempt.user_id || (p.username && p.username.toLowerCase() === attempt.user_id.toLowerCase()));
+    if (prof) {
+      const totalScore = Number(attempt.total_score) || 0;
+      const totalQuestions = Number(attempt.total_questions) || 30;
+      const starsReward = 20 + Math.floor((totalScore / totalQuestions) * 30);
+      prof.total_stars = (prof.total_stars || 0) + starsReward;
+      prof.total_points = (prof.total_points || 0) + (totalScore * 10);
+      prof.updated_at = new Date().toISOString();
+    }
+
+    saveServerDb(db);
+
+    // Persiste no Supabase se configurado
+    if (supabaseServerClient) {
+      try {
+        await supabaseServerClient.from('quiz_attempts').upsert([attempt]);
+      } catch (err) {
+        console.warn('Erro ao inserir quiz_attempt no Supabase:', err);
+      }
+    }
+
+    return res.json({ success: true, attempt });
+  } catch (err: any) {
+    console.error('Erro em /api/db/record-quiz:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.7 Registrar Resposta de Questão / Exercício pelo Estudante
+app.post('/api/db/record-question', async (req, res) => {
+  try {
+    const attempt = req.body;
+    if (!attempt || !attempt.user_id) {
+      return res.status(400).json({ error: 'Dados do exercício inválidos' });
+    }
+    const db = loadServerDb();
+    if (!db.questionAttempts) db.questionAttempts = [];
+
+    db.questionAttempts.push(attempt);
+
+    if (attempt.is_correct) {
+      const prof = db.profiles.find((p: any) => p.id === attempt.user_id || (p.username && p.username.toLowerCase() === attempt.user_id.toLowerCase()));
+      if (prof) {
+        prof.total_stars = (prof.total_stars || 0) + 2;
+        prof.total_points = (prof.total_points || 0) + 10;
+        prof.updated_at = new Date().toISOString();
+      }
+    }
+
+    saveServerDb(db);
+
+    if (supabaseServerClient) {
+      try {
+        await supabaseServerClient.from('question_attempts').upsert([attempt]);
+      } catch (err) {
+        console.warn('Erro ao inserir question_attempt no Supabase:', err);
+      }
+    }
+
+    return res.json({ success: true, attempt });
+  } catch (err: any) {
+    console.error('Erro em /api/db/record-question:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.8 Registrar Conclusão / Progresso de Aula
+app.post('/api/db/record-lesson', async (req, res) => {
+  try {
+    const progress = req.body;
+    if (!progress || !progress.user_id || !progress.lesson_id) {
+      return res.status(400).json({ error: 'Dados do progresso de aula inválidos' });
+    }
+    const db = loadServerDb();
+    if (!db.lessonProgress) db.lessonProgress = [];
+
+    const existingIdx = db.lessonProgress.findIndex((l: any) => l.user_id === progress.user_id && l.lesson_id === progress.lesson_id);
+    if (existingIdx >= 0) {
+      db.lessonProgress[existingIdx] = { ...db.lessonProgress[existingIdx], ...progress };
+    } else {
+      db.lessonProgress.push(progress);
+    }
+
+    if (progress.completed) {
+      const prof = db.profiles.find((p: any) => p.id === progress.user_id || (p.username && p.username.toLowerCase() === progress.user_id.toLowerCase()));
+      if (prof) {
+        prof.total_stars = (prof.total_stars || 0) + 10;
+        prof.total_points = (prof.total_points || 0) + 50;
+        prof.updated_at = new Date().toISOString();
+      }
+    }
+
+    saveServerDb(db);
+
+    if (supabaseServerClient) {
+      try {
+        await supabaseServerClient.from('lesson_progress').upsert([progress]);
+      } catch (err) {
+        console.warn('Erro ao inserir lesson_progress no Supabase:', err);
+      }
+    }
+
+    return res.json({ success: true, progress });
+  } catch (err: any) {
+    console.error('Erro em /api/db/record-lesson:', err);
     return res.status(500).json({ error: err.message });
   }
 });

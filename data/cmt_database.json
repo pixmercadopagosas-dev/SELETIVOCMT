@@ -13,9 +13,9 @@
       "guardian_phone": "(99) 99113-6329",
       "guardian_cpf": "000.000.000-00",
       "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
+      "total_stars": 999,
+      "total_points": 5000,
+      "study_streak_days": 30,
       "created_at": "2026-10-16T02:15:54.380534+00:00",
       "updated_at": "2026-10-16T02:15:54.380534+00:00"
     },
@@ -32,11 +32,11 @@
       "guardian_phone": "(99) 99113-6329",
       "guardian_cpf": "",
       "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
+      "total_stars": 140,
+      "total_points": 750,
+      "study_streak_days": 7,
       "created_at": "2026-10-16T02:16:56.200111+00:00",
-      "updated_at": "2026-10-17T02:06:43.429+00:00"
+      "updated_at": "2026-10-21T18:00:00.000Z"
     },
     {
       "id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
@@ -51,11 +51,11 @@
       "guardian_phone": "(99) 98111-2233",
       "guardian_cpf": "",
       "agreed_terms": true,
-      "total_stars": 0,
-      "total_points": 0,
-      "study_streak_days": 0,
+      "total_stars": 95,
+      "total_points": 520,
+      "study_streak_days": 4,
       "created_at": "2026-10-19T03:32:18.755849+00:00",
-      "updated_at": "2026-10-20T00:52:52.814+00:00"
+      "updated_at": "2026-10-21T18:00:00.000Z"
     }
   ],
   "accessRequests": [
@@ -110,6 +110,192 @@
       "phone": "(99) 98111-2233",
       "passwordHash": "senha123",
       "updatedAt": "2026-10-21T03:45:35.279Z"
+    }
+  ],
+  "quizAttempts": [
+    {
+      "id": "quiz-att-laura-01",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "quiz_id": "simulado-6ano-oficial-1",
+      "mode": "simulado",
+      "status": "concluido",
+      "started_at": "2026-10-20T14:00:00.000Z",
+      "finished_at": "2026-10-20T17:15:30.000Z",
+      "time_spent_seconds": 11730,
+      "score_portuguese": 13,
+      "score_math": 12,
+      "total_score": 25,
+      "total_questions": 30,
+      "passed_rule_30percent": true,
+      "answers_data": []
+    },
+    {
+      "id": "quiz-att-laura-02",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "quiz_id": "simulado-6ano-diagnostico",
+      "mode": "treino_imediato",
+      "status": "concluido",
+      "started_at": "2026-10-18T10:30:00.000Z",
+      "finished_at": "2026-10-18T12:45:10.000Z",
+      "time_spent_seconds": 8110,
+      "score_portuguese": 11,
+      "score_math": 11,
+      "total_score": 22,
+      "total_questions": 30,
+      "passed_rule_30percent": true,
+      "answers_data": []
+    },
+    {
+      "id": "quiz-att-bruna-01",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "quiz_id": "simulado-6ano-oficial-1",
+      "mode": "simulado",
+      "status": "concluido",
+      "started_at": "2026-10-21T09:00:00.000Z",
+      "finished_at": "2026-10-21T11:55:00.000Z",
+      "time_spent_seconds": 10500,
+      "score_portuguese": 10,
+      "score_math": 9,
+      "total_score": 19,
+      "total_questions": 30,
+      "passed_rule_30percent": true,
+      "answers_data": []
+    }
+  ],
+  "questionAttempts": [
+    {
+      "id": "qatt-laura-1",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "question_id": "q-port-6-1",
+      "selected_option": "B",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-20T14:10:00.000Z"
+    },
+    {
+      "id": "qatt-laura-2",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "question_id": "q-mat-6-1",
+      "selected_option": "C",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-20T14:25:00.000Z"
+    },
+    {
+      "id": "qatt-laura-3",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "question_id": "q-mat-6-2",
+      "selected_option": "A",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-20T14:40:00.000Z"
+    },
+    {
+      "id": "qatt-laura-4",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "question_id": "q-port-6-2",
+      "selected_option": "D",
+      "is_correct": false,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-20T14:55:00.000Z"
+    },
+    {
+      "id": "qatt-laura-5",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "question_id": "q-port-6-3",
+      "selected_option": "A",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-20T15:10:00.000Z"
+    },
+    {
+      "id": "qatt-bruna-1",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "question_id": "q-port-6-1",
+      "selected_option": "B",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-21T09:15:00.000Z"
+    },
+    {
+      "id": "qatt-bruna-2",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "question_id": "q-mat-6-1",
+      "selected_option": "C",
+      "is_correct": true,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-21T09:30:00.000Z"
+    },
+    {
+      "id": "qatt-bruna-3",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "question_id": "q-mat-6-2",
+      "selected_option": "B",
+      "is_correct": false,
+      "explanation_viewed": true,
+      "answered_at": "2026-10-21T09:45:00.000Z"
+    }
+  ],
+  "lessonProgress": [
+    {
+      "id": "prog-laura-1",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "lesson_id": "les-port-6-1",
+      "completed": true,
+      "completed_at": "2026-10-19T10:00:00.000Z",
+      "time_spent_seconds": 900,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-19T10:00:00.000Z"
+    },
+    {
+      "id": "prog-laura-2",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "lesson_id": "les-port-6-2",
+      "completed": true,
+      "completed_at": "2026-10-19T11:00:00.000Z",
+      "time_spent_seconds": 1200,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-19T11:00:00.000Z"
+    },
+    {
+      "id": "prog-laura-3",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "lesson_id": "les-mat-6-1",
+      "completed": true,
+      "completed_at": "2026-10-20T08:30:00.000Z",
+      "time_spent_seconds": 1500,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-20T08:30:00.000Z"
+    },
+    {
+      "id": "prog-laura-4",
+      "user_id": "4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a",
+      "lesson_id": "les-mat-6-2",
+      "completed": true,
+      "completed_at": "2026-10-20T09:40:00.000Z",
+      "time_spent_seconds": 1100,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-20T09:40:00.000Z"
+    },
+    {
+      "id": "prog-bruna-1",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "lesson_id": "les-port-6-1",
+      "completed": true,
+      "completed_at": "2026-10-21T08:00:00.000Z",
+      "time_spent_seconds": 850,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-21T08:00:00.000Z"
+    },
+    {
+      "id": "prog-bruna-2",
+      "user_id": "8771b727-3d5e-47cb-b3a6-6db0abea8dc5",
+      "lesson_id": "les-mat-6-1",
+      "completed": true,
+      "completed_at": "2026-10-21T08:45:00.000Z",
+      "time_spent_seconds": 1300,
+      "last_position_percent": 100,
+      "last_accessed_at": "2026-10-21T08:45:00.000Z"
     }
   ],
   "auditLogs": [

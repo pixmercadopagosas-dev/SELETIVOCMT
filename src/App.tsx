@@ -633,6 +633,7 @@ function MainApp() {
                   currentAdmin={currentUser}
                   onRefreshData={() => loadUserData(currentUser.id)}
                   onNavigateToDbTab={() => setCurrentTab('teste-banco')}
+                  onNavigateToPerformanceTab={() => setCurrentTab('desempenho')}
                 />
               )}
 

@@ -360,6 +360,36 @@ class DatabaseEngine {
             safeStorageSet(STORAGE_KEYS.AUDIT_LOGS, this.auditLogs);
           }
 
+          if (Array.isArray(data.quizAttempts)) {
+            const map = new Map<string, any>();
+            for (const q of [...this.quizAttempts, ...data.quizAttempts]) {
+              if (q && q.id) map.set(q.id, q);
+            }
+            this.quizAttempts = Array.from(map.values());
+            safeStorageSet(STORAGE_KEYS.QUIZ_ATTEMPTS, this.quizAttempts);
+          }
+
+          if (Array.isArray(data.questionAttempts)) {
+            const map = new Map<string, any>();
+            for (const a of [...this.questionAttempts, ...data.questionAttempts]) {
+              if (a && a.id) map.set(a.id, a);
+            }
+            this.questionAttempts = Array.from(map.values());
+            safeStorageSet(STORAGE_KEYS.QUESTION_ATTEMPTS, this.questionAttempts);
+          }
+
+          if (Array.isArray(data.lessonProgress)) {
+            const map = new Map<string, any>();
+            for (const l of [...this.lessonProgress, ...data.lessonProgress]) {
+              if (l && (l.id || (l.user_id && l.lesson_id))) {
+                const key = l.id || `${l.user_id}_${l.lesson_id}`;
+                map.set(key, l);
+              }
+            }
+            this.lessonProgress = Array.from(map.values());
+            safeStorageSet(STORAGE_KEYS.LESSON_PROGRESS, this.lessonProgress);
+          }
+
           // Envia perfis pendentes locais para o servidor caso ainda não existam no servidor
           const localPending = this.profiles.filter(
             (p) => p.role === 'estudante' && p.account_status === 'pendente' && p.username && !isFictitiousUser(p)
@@ -1654,13 +1684,34 @@ class DatabaseEngine {
   // -------------------------------------------------------------
   // PROGRESSO DAS AULAS
   // -------------------------------------------------------------
+  private resolveUserKeys(userId: string): Set<string> {
+    const keys = new Set<string>();
+    if (!userId) return keys;
+    const clean = userId.trim().toLowerCase();
+    keys.add(clean);
+    const prof = this.profiles.find(
+      (p) => p.id.toLowerCase() === clean || (p.username && p.username.toLowerCase() === clean)
+    );
+    if (prof) {
+      if (prof.id) keys.add(prof.id.toLowerCase());
+      if (prof.username) keys.add(prof.username.toLowerCase());
+    }
+    return keys;
+  }
+
   async getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | null> {
-    const prog = this.lessonProgress.find((p) => p.user_id === userId && p.lesson_id === lessonId);
+    const keys = this.resolveUserKeys(userId);
+    const prog = this.lessonProgress.find((p) => p.user_id && keys.has(p.user_id.toLowerCase()) && p.lesson_id === lessonId);
     return prog ? { ...prog } : null;
   }
 
   async getAllUserProgress(userId: string): Promise<LessonProgress[]> {
-    return this.lessonProgress.filter((p) => p.user_id === userId);
+    const keys = this.resolveUserKeys(userId);
+    return this.lessonProgress.filter((p) => p.user_id && keys.has(p.user_id.toLowerCase()));
+  }
+
+  async getAllLessonsProgress(): Promise<LessonProgress[]> {
+    return [...this.lessonProgress];
   }
 
   async markLessonCompleted(
@@ -1668,7 +1719,8 @@ class DatabaseEngine {
     lessonId: string,
     timeSpentSeconds: number = 600
   ): Promise<{ progress: LessonProgress; starsEarned: number }> {
-    let prog = this.lessonProgress.find((p) => p.user_id === userId && p.lesson_id === lessonId);
+    const keys = this.resolveUserKeys(userId);
+    let prog = this.lessonProgress.find((p) => p.user_id && keys.has(p.user_id.toLowerCase()) && p.lesson_id === lessonId);
     let isFirstTime = false;
 
     if (!prog) {
@@ -1702,6 +1754,17 @@ class DatabaseEngine {
 
     this.persistAll();
 
+    // Sincroniza com servidor central imediatamente
+    try {
+      await fetch('/api/db/record-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prog),
+      });
+    } catch (e) {
+      console.warn('Erro ao sincronizar aula com servidor:', e);
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('lesson_progress').upsert([prog]);
@@ -1719,7 +1782,8 @@ class DatabaseEngine {
     percent: number,
     timeSpentDelta: number
   ): Promise<void> {
-    let prog = this.lessonProgress.find((p) => p.user_id === userId && p.lesson_id === lessonId);
+    const keys = this.resolveUserKeys(userId);
+    let prog = this.lessonProgress.find((p) => p.user_id && keys.has(p.user_id.toLowerCase()) && p.lesson_id === lessonId);
     if (!prog) {
       prog = {
         id: `prog-${Date.now()}`,
@@ -1740,8 +1804,9 @@ class DatabaseEngine {
   }
 
   async getLastStudiedLesson(userId: string): Promise<LessonProgress | null> {
+    const keys = this.resolveUserKeys(userId);
     const list = this.lessonProgress
-      .filter((p) => p.user_id === userId)
+      .filter((p) => p.user_id && keys.has(p.user_id.toLowerCase()))
       .sort((a, b) => new Date(b.last_accessed_at).getTime() - new Date(a.last_accessed_at).getTime());
     return list[0] || null;
   }
@@ -1770,18 +1835,35 @@ class DatabaseEngine {
       await this.awardStars(userId, 2, 10, 'Acerto de questão de fixação');
     }
 
-    const userAttempts = this.questionAttempts.filter((a) => a.user_id === userId);
+    const userAttempts = await this.getUserQuestionAttempts(userId);
     const correctCount = userAttempts.filter((a) => a.is_correct).length;
     if (correctCount >= 5) {
       await this.checkAndAwardAchievements(userId, 'ach-5-acertos');
     }
 
     this.persistAll();
+
+    // Sincroniza com servidor central imediatamente
+    try {
+      await fetch('/api/db/record-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attempt),
+      });
+    } catch (e) {
+      console.warn('Erro ao sincronizar questão com servidor:', e);
+    }
+
     return attempt;
   }
 
   async getUserQuestionAttempts(userId: string): Promise<QuestionAttempt[]> {
-    return this.questionAttempts.filter((a) => a.user_id === userId);
+    const keys = this.resolveUserKeys(userId);
+    return this.questionAttempts.filter((a) => a.user_id && keys.has(a.user_id.toLowerCase()));
+  }
+
+  async getAllQuestionAttempts(): Promise<QuestionAttempt[]> {
+    return [...this.questionAttempts];
   }
 
   // -------------------------------------------------------------
@@ -1830,6 +1912,17 @@ class DatabaseEngine {
 
     this.persistAll();
 
+    // Sincroniza com servidor central imediatamente
+    try {
+      await fetch('/api/db/record-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attempt),
+      });
+    } catch (e) {
+      console.warn('Erro ao sincronizar simulado com servidor:', e);
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('quiz_attempts').insert([attempt]);
@@ -1842,7 +1935,12 @@ class DatabaseEngine {
   }
 
   async getUserQuizAttempts(userId: string): Promise<QuizAttempt[]> {
-    return this.quizAttempts.filter((q) => q.user_id === userId);
+    const keys = this.resolveUserKeys(userId);
+    return this.quizAttempts.filter((q) => q.user_id && keys.has(q.user_id.toLowerCase()));
+  }
+
+  async getAllQuizAttempts(): Promise<QuizAttempt[]> {
+    return [...this.quizAttempts];
   }
 
   // -------------------------------------------------------------
