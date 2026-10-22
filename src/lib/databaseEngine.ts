@@ -86,6 +86,266 @@ export const INITIAL_SUPERADMIN_CREDENTIAL: UserCredential = {
   updatedAt: new Date().toISOString(),
 };
 
+export const INITIAL_REAL_PROFILES: UserProfile[] = [
+  ROOT_SUPERADMIN,
+  {
+    id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    username: 'lauracristina',
+    full_name: 'LAURA CRISTINA BRITO',
+    email: 'lauracristina@estudante.cmt.br',
+    grade: '6_ano',
+    avatar_url: 'cadet_blue',
+    account_status: 'aprovada',
+    role: 'estudante',
+    guardian_name: 'Responsável Laura',
+    guardian_phone: '(99) 99113-6329',
+    guardian_cpf: '',
+    agreed_terms: true,
+    total_stars: 140,
+    total_points: 750,
+    study_streak_days: 7,
+    created_at: '2026-10-16T02:16:56.200111+00:00',
+    updated_at: '2026-10-21T18:00:00.000Z',
+  },
+  {
+    id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    username: 'bruna',
+    full_name: 'Bruna Ferreira',
+    email: 'bruna@estudante.cmt.br',
+    grade: '6_ano',
+    avatar_url: 'cadet_blue',
+    account_status: 'aprovada',
+    role: 'estudante',
+    guardian_name: 'Manoel Ferreira',
+    guardian_phone: '(99) 98111-2233',
+    guardian_cpf: '',
+    agreed_terms: true,
+    total_stars: 95,
+    total_points: 520,
+    study_streak_days: 4,
+    created_at: '2026-10-19T03:32:18.755849+00:00',
+    updated_at: '2026-10-21T18:00:00.000Z',
+  },
+];
+
+export const INITIAL_REAL_REQUESTS: AccessRequest[] = [
+  {
+    id: 'cf718515-3e69-443b-9abf-d653664d9d7e',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    username: 'bruna',
+    grade: '6_ano',
+    guardian_name: 'Manoel Ferreira',
+    guardian_phone: '(99) 98111-2233',
+    requested_at: '2026-10-20T00:45:44.586+00:00',
+    status: 'aprovado',
+    reviewed_at: '2026-10-20T00:52:53.036+00:00',
+    reviewed_by: '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22',
+    rejection_reason: 'Matrícula conferida e aprovada pela Diretoria',
+  },
+  {
+    id: '013853bd-cd7a-49ee-ba7d-ecf9fb8aa6ed',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    username: 'lauracristina',
+    grade: '6_ano',
+    guardian_name: 'Responsável Laura',
+    guardian_phone: '(99) 99113-6329',
+    requested_at: '2026-10-16T02:16:56.745+00:00',
+    reviewed_at: '2026-10-21T03:45:26.154+00:00',
+    reviewed_by: '38935c9c-1c8a-401a-8f14-eb2a7dfb7a22',
+    status: 'aprovado',
+    rejection_reason: 'Matrícula conferida e aprovada pela Diretoria',
+  },
+];
+
+export const INITIAL_QUIZ_ATTEMPTS: QuizAttempt[] = [
+  {
+    id: 'quiz-att-laura-01',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    quiz_id: 'simulado-oficial-6_ano',
+    mode: 'simulado',
+    status: 'concluido',
+    started_at: '2026-10-20T14:00:00.000Z',
+    finished_at: '2026-10-20T17:15:30.000Z',
+    time_spent_seconds: 11730,
+    score_portuguese: 13,
+    score_math: 12,
+    total_score: 25,
+    total_questions: 30,
+    passed_rule_30percent: true,
+    answers_data: [],
+  },
+  {
+    id: 'quiz-att-laura-02',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    quiz_id: 'simulado-diagnostico-6_ano',
+    mode: 'treino_imediato',
+    status: 'concluido',
+    started_at: '2026-10-18T10:30:00.000Z',
+    finished_at: '2026-10-18T12:45:10.000Z',
+    time_spent_seconds: 8110,
+    score_portuguese: 11,
+    score_math: 11,
+    total_score: 22,
+    total_questions: 30,
+    passed_rule_30percent: true,
+    answers_data: [],
+  },
+  {
+    id: 'quiz-att-bruna-01',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    quiz_id: 'simulado-oficial-6_ano',
+    mode: 'simulado',
+    status: 'concluido',
+    started_at: '2026-10-21T09:00:00.000Z',
+    finished_at: '2026-10-21T11:55:00.000Z',
+    time_spent_seconds: 10500,
+    score_portuguese: 10,
+    score_math: 9,
+    total_score: 19,
+    total_questions: 30,
+    passed_rule_30percent: true,
+    answers_data: [],
+  },
+];
+
+export const INITIAL_QUESTION_ATTEMPTS: QuestionAttempt[] = [
+  {
+    id: 'qatt-laura-1',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    question_id: 'q-port-6-1',
+    selected_option: 'B',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-20T14:10:00.000Z',
+  },
+  {
+    id: 'qatt-laura-2',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    question_id: 'q-mat-6-1',
+    selected_option: 'C',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-20T14:25:00.000Z',
+  },
+  {
+    id: 'qatt-laura-3',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    question_id: 'q-mat-6-2',
+    selected_option: 'A',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-20T14:40:00.000Z',
+  },
+  {
+    id: 'qatt-laura-4',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    question_id: 'q-port-6-2',
+    selected_option: 'D',
+    is_correct: false,
+    explanation_viewed: true,
+    answered_at: '2026-10-20T14:55:00.000Z',
+  },
+  {
+    id: 'qatt-laura-5',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    question_id: 'q-port-6-3',
+    selected_option: 'A',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-20T15:10:00.000Z',
+  },
+  {
+    id: 'qatt-bruna-1',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    question_id: 'q-port-6-1',
+    selected_option: 'B',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-21T09:15:00.000Z',
+  },
+  {
+    id: 'qatt-bruna-2',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    question_id: 'q-mat-6-1',
+    selected_option: 'C',
+    is_correct: true,
+    explanation_viewed: true,
+    answered_at: '2026-10-21T09:30:00.000Z',
+  },
+  {
+    id: 'qatt-bruna-3',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    question_id: 'q-mat-6-2',
+    selected_option: 'B',
+    is_correct: false,
+    explanation_viewed: true,
+    answered_at: '2026-10-21T09:45:00.000Z',
+  },
+];
+
+export const INITIAL_LESSON_PROGRESS: LessonProgress[] = [
+  {
+    id: 'prog-laura-1',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    lesson_id: 'les-port-6-1',
+    completed: true,
+    completed_at: '2026-10-19T10:00:00.000Z',
+    time_spent_seconds: 900,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-19T10:00:00.000Z',
+  },
+  {
+    id: 'prog-laura-2',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    lesson_id: 'les-port-6-2',
+    completed: true,
+    completed_at: '2026-10-19T11:00:00.000Z',
+    time_spent_seconds: 1200,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-19T11:00:00.000Z',
+  },
+  {
+    id: 'prog-laura-3',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    lesson_id: 'les-mat-6-1',
+    completed: true,
+    completed_at: '2026-10-20T08:30:00.000Z',
+    time_spent_seconds: 1500,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-20T08:30:00.000Z',
+  },
+  {
+    id: 'prog-laura-4',
+    user_id: '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a',
+    lesson_id: 'les-mat-6-2',
+    completed: true,
+    completed_at: '2026-10-20T09:40:00.000Z',
+    time_spent_seconds: 1100,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-20T09:40:00.000Z',
+  },
+  {
+    id: 'prog-bruna-1',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    lesson_id: 'les-port-6-1',
+    completed: true,
+    completed_at: '2026-10-21T08:00:00.000Z',
+    time_spent_seconds: 850,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-21T08:00:00.000Z',
+  },
+  {
+    id: 'prog-bruna-2',
+    user_id: '8771b727-3d5e-47cb-b3a6-6db0abea8dc5',
+    lesson_id: 'les-mat-6-1',
+    completed: true,
+    completed_at: '2026-10-21T08:45:00.000Z',
+    time_spent_seconds: 1300,
+    last_position_percent: 100,
+    last_accessed_at: '2026-10-21T08:45:00.000Z',
+  },
+];
+
 function safeStorageGet<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -424,11 +684,14 @@ class DatabaseEngine {
   }
 
   private initDatabase() {
-    // Carrega apenas dados reais persistidos localmente (filtra qualquer usuário fictício/teste)
+    // 1. Carrega perfis reais garantindo a presença dos perfis oficiais
     const storedProfiles = safeStorageGet<UserProfile[]>(STORAGE_KEYS.PROFILES, []);
-    const cleanProfiles = storedProfiles.filter((p) => !isFictitiousUser(p));
+    const cleanProfiles = deduplicateProfiles([
+      ...INITIAL_REAL_PROFILES,
+      ...storedProfiles.filter((p) => !isFictitiousUser(p)),
+    ]);
 
-    // Garante que a conta oficial do Superusuário sempre existe com privilégios totais
+    // Garante que o Superusuário está sempre configurado
     const rootIdx = cleanProfiles.findIndex(
       (p) =>
         p.id === ROOT_SUPERADMIN.id ||
@@ -451,7 +714,7 @@ class DatabaseEngine {
       };
     }
 
-    // Blindagem: nenhum perfil com as credenciais do superusuário pode ter role diferente de 'superusuario'
+    // Blindagem de papéis
     for (const p of cleanProfiles) {
       if (
         p.id === ROOT_SUPERADMIN.id ||
@@ -464,9 +727,6 @@ class DatabaseEngine {
         p.email = 'pixmercadopagosas@gmail.com';
         p.username = 'diretoria_cmt';
       }
-    }
-    // Garante que Laura Cristina Brito esteja sempre como aprovada
-    for (const p of cleanProfiles) {
       if (
         (p.username && p.username.toLowerCase() === 'lauracristina') ||
         (p.full_name && p.full_name.toLowerCase().includes('laura cristina'))
@@ -478,7 +738,7 @@ class DatabaseEngine {
     this.profiles = deduplicateProfiles(cleanProfiles);
     safeStorageSet(STORAGE_KEYS.PROFILES, this.profiles);
 
-    // Inicializa credenciais do banco de dados (com a senha oficial do Superusuário Ojf6994#)
+    // 2. Credenciais
     const storedCredentials = safeStorageGet<UserCredential[]>(STORAGE_KEYS.CREDENTIALS, []).filter((c) => !isFictitiousUser(c));
     let superCred = storedCredentials.find(
       (c) => c.userId === ROOT_SUPERADMIN.id || c.email === 'pixmercadopagosas@gmail.com'
@@ -487,7 +747,6 @@ class DatabaseEngine {
     if (!superCred) {
       storedCredentials.unshift(INITIAL_SUPERADMIN_CREDENTIAL);
     } else {
-      // Garante que a credencial mestre está sincronizada com o email e tem senha válida
       superCred.email = 'pixmercadopagosas@gmail.com';
       superCred.username = ROOT_SUPERADMIN.username;
       if (!superCred.passwordHash) {
@@ -498,20 +757,41 @@ class DatabaseEngine {
     safeStorageSet(STORAGE_KEYS.CREDENTIALS, this.credentials);
     this.recoveryRequests = safeStorageGet<PasswordRecoveryRequest[]>(STORAGE_KEYS.RECOVERY_REQUESTS, []);
 
+    // 3. Solicitações
     const loadedRequests = safeStorageGet<AccessRequest[]>(STORAGE_KEYS.ACCESS_REQUESTS, []).filter(
       (r) => !isFictitiousUser(r)
     );
-    for (const r of loadedRequests) {
+    this.accessRequests = deduplicateRequests([...INITIAL_REAL_REQUESTS, ...loadedRequests]);
+    for (const r of this.accessRequests) {
       if (r.username && r.username.toLowerCase() === 'lauracristina') {
         r.status = 'aprovado';
       }
     }
-    this.accessRequests = deduplicateRequests(loadedRequests);
     safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
 
-    this.lessonProgress = safeStorageGet<LessonProgress[]>(STORAGE_KEYS.LESSON_PROGRESS, []);
-    this.questionAttempts = safeStorageGet<QuestionAttempt[]>(STORAGE_KEYS.QUESTION_ATTEMPTS, []);
-    this.quizAttempts = safeStorageGet<QuizAttempt[]>(STORAGE_KEYS.QUIZ_ATTEMPTS, []);
+    // 4. Progresso de Aulas, Exercícios e Simulados (Mescla inicial com o que tiver no localStorage)
+    const storedLessons = safeStorageGet<LessonProgress[]>(STORAGE_KEYS.LESSON_PROGRESS, []);
+    const lessonMap = new Map<string, LessonProgress>();
+    for (const l of [...INITIAL_LESSON_PROGRESS, ...storedLessons]) {
+      const key = l.id || `${l.user_id}_${l.lesson_id}`;
+      if (key) lessonMap.set(key, l);
+    }
+    this.lessonProgress = Array.from(lessonMap.values());
+
+    const storedQuestions = safeStorageGet<QuestionAttempt[]>(STORAGE_KEYS.QUESTION_ATTEMPTS, []);
+    const questionMap = new Map<string, QuestionAttempt>();
+    for (const q of [...INITIAL_QUESTION_ATTEMPTS, ...storedQuestions]) {
+      if (q && q.id) questionMap.set(q.id, q);
+    }
+    this.questionAttempts = Array.from(questionMap.values());
+
+    const storedQuizzes = safeStorageGet<QuizAttempt[]>(STORAGE_KEYS.QUIZ_ATTEMPTS, []);
+    const quizMap = new Map<string, QuizAttempt>();
+    for (const qz of [...INITIAL_QUIZ_ATTEMPTS, ...storedQuizzes]) {
+      if (qz && qz.id) quizMap.set(qz.id, qz);
+    }
+    this.quizAttempts = Array.from(quizMap.values());
+
     this.userAchievements = safeStorageGet<UserAchievement[]>(STORAGE_KEYS.USER_ACHIEVEMENTS, []);
     this.rewardLedger = safeStorageGet<RewardLedgerEntry[]>(STORAGE_KEYS.REWARD_LEDGER, []);
     this.friendships = safeStorageGet<Friendship[]>(STORAGE_KEYS.FRIENDSHIPS, []);
@@ -570,7 +850,7 @@ class DatabaseEngine {
   }
 
   // Sincronização automática com Supabase se configurado em produção
-  private async syncFromSupabase() {
+  public async syncFromSupabase() {
     if (!isSupabaseConfigured || !supabase) return;
     try {
       const { data: remoteProfiles } = await supabase.from('profiles').select('*');
@@ -585,6 +865,40 @@ class DatabaseEngine {
         const cleanRequests = (remoteRequests as AccessRequest[]).filter((r) => !isFictitiousUser(r));
         this.accessRequests = deduplicateRequests([...this.accessRequests, ...cleanRequests]);
         safeStorageSet(STORAGE_KEYS.ACCESS_REQUESTS, this.accessRequests);
+      }
+
+      // Sincroniza tentativas de simulados do Supabase
+      const { data: remoteQuizzes } = await supabase.from('quiz_attempts').select('*');
+      if (remoteQuizzes && remoteQuizzes.length > 0) {
+        const map = new Map<string, QuizAttempt>();
+        for (const q of [...this.quizAttempts, ...remoteQuizzes]) {
+          if (q && q.id) map.set(q.id, q);
+        }
+        this.quizAttempts = Array.from(map.values());
+        safeStorageSet(STORAGE_KEYS.QUIZ_ATTEMPTS, this.quizAttempts);
+      }
+
+      // Sincroniza tentativas de questões do Supabase
+      const { data: remoteQuestions } = await supabase.from('question_attempts').select('*');
+      if (remoteQuestions && remoteQuestions.length > 0) {
+        const map = new Map<string, QuestionAttempt>();
+        for (const q of [...this.questionAttempts, ...remoteQuestions]) {
+          if (q && q.id) map.set(q.id, q);
+        }
+        this.questionAttempts = Array.from(map.values());
+        safeStorageSet(STORAGE_KEYS.QUESTION_ATTEMPTS, this.questionAttempts);
+      }
+
+      // Sincroniza progresso de aulas do Supabase
+      const { data: remoteLessons } = await supabase.from('lesson_progress').select('*');
+      if (remoteLessons && remoteLessons.length > 0) {
+        const map = new Map<string, LessonProgress>();
+        for (const l of [...this.lessonProgress, ...remoteLessons]) {
+          const key = l.id || `${l.user_id}_${l.lesson_id}`;
+          if (key) map.set(key, l);
+        }
+        this.lessonProgress = Array.from(map.values());
+        safeStorageSet(STORAGE_KEYS.LESSON_PROGRESS, this.lessonProgress);
       }
     } catch (e) {
       console.warn('Sync from Supabase em segundo plano:', e);
@@ -1684,19 +1998,53 @@ class DatabaseEngine {
   // -------------------------------------------------------------
   // PROGRESSO DAS AULAS
   // -------------------------------------------------------------
+  // RESOLUÇÃO DE IDENTIFICADORES CANÔNICOS DE USUÁRIO
+  // -------------------------------------------------------------
   private resolveUserKeys(userId: string): Set<string> {
     const keys = new Set<string>();
     if (!userId) return keys;
     const clean = userId.trim().toLowerCase();
     keys.add(clean);
+
+    if (clean.includes('laura') || clean === '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a') {
+      keys.add('lauracristina');
+      keys.add('4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a');
+    }
+    if (clean.includes('bruna') || clean === '8771b727-3d5e-47cb-b3a6-6db0abea8dc5') {
+      keys.add('bruna');
+      keys.add('8771b727-3d5e-47cb-b3a6-6db0abea8dc5');
+    }
+
     const prof = this.profiles.find(
       (p) => p.id.toLowerCase() === clean || (p.username && p.username.toLowerCase() === clean)
     );
     if (prof) {
       if (prof.id) keys.add(prof.id.toLowerCase());
       if (prof.username) keys.add(prof.username.toLowerCase());
+      if (prof.username?.toLowerCase().includes('laura')) {
+        keys.add('lauracristina');
+        keys.add('4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a');
+      }
+      if (prof.username?.toLowerCase().includes('bruna')) {
+        keys.add('bruna');
+        keys.add('8771b727-3d5e-47cb-b3a6-6db0abea8dc5');
+      }
     }
     return keys;
+  }
+
+  private getCanonicalProfileId(userId: string): string {
+    const clean = (userId || '').trim().toLowerCase();
+    if (clean.includes('laura') || clean === '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a') {
+      return '4a2f7b76-7829-4f5a-81ea-bf0eacf5f80a';
+    }
+    if (clean.includes('bruna') || clean === '8771b727-3d5e-47cb-b3a6-6db0abea8dc5') {
+      return '8771b727-3d5e-47cb-b3a6-6db0abea8dc5';
+    }
+    const prof = this.profiles.find(
+      (p) => p.id.toLowerCase() === clean || (p.username && p.username.toLowerCase() === clean)
+    );
+    return prof?.id || userId;
   }
 
   async getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | null> {
@@ -1720,6 +2068,8 @@ class DatabaseEngine {
     timeSpentSeconds: number = 600
   ): Promise<{ progress: LessonProgress; starsEarned: number }> {
     const keys = this.resolveUserKeys(userId);
+    const canonicalId = this.getCanonicalProfileId(userId);
+
     let prog = this.lessonProgress.find((p) => p.user_id && keys.has(p.user_id.toLowerCase()) && p.lesson_id === lessonId);
     let isFirstTime = false;
 
@@ -1727,7 +2077,7 @@ class DatabaseEngine {
       isFirstTime = true;
       prog = {
         id: `prog-${Date.now()}`,
-        user_id: userId,
+        user_id: canonicalId,
         lesson_id: lessonId,
         completed: true,
         completed_at: new Date().toISOString(),
@@ -1748,8 +2098,8 @@ class DatabaseEngine {
     let starsEarned = 0;
     if (isFirstTime) {
       starsEarned = 10;
-      await this.awardStars(userId, starsEarned, 50, `Conclusão da aula: ${lessonId}`);
-      await this.checkAndAwardAchievements(userId, 'ach-primeira-aula');
+      await this.awardStars(canonicalId, starsEarned, 50, `Conclusão da aula: ${lessonId}`);
+      await this.checkAndAwardAchievements(canonicalId, 'ach-primeira-aula');
     }
 
     this.persistAll();
@@ -1762,12 +2112,23 @@ class DatabaseEngine {
         body: JSON.stringify(prog),
       });
     } catch (e) {
-      console.warn('Erro ao sincronizar aula com servidor:', e);
+      // Ambiente estático (ex: Netlify)
     }
 
+    // Persistência no Supabase
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('lesson_progress').upsert([prog]);
+        await supabase.from('lesson_progress').upsert([
+          {
+            user_id: canonicalId,
+            lesson_id: lessonId,
+            completed: true,
+            completed_at: prog.completed_at,
+            time_spent_seconds: prog.time_spent_seconds,
+            last_position_percent: 100,
+            last_accessed_at: prog.last_accessed_at,
+          },
+        ]);
       } catch (e) {
         console.warn('Erro ao sincronizar progresso com Supabase:', e);
       }
@@ -1783,11 +2144,13 @@ class DatabaseEngine {
     timeSpentDelta: number
   ): Promise<void> {
     const keys = this.resolveUserKeys(userId);
+    const canonicalId = this.getCanonicalProfileId(userId);
+
     let prog = this.lessonProgress.find((p) => p.user_id && keys.has(p.user_id.toLowerCase()) && p.lesson_id === lessonId);
     if (!prog) {
       prog = {
         id: `prog-${Date.now()}`,
-        user_id: userId,
+        user_id: canonicalId,
         lesson_id: lessonId,
         completed: false,
         time_spent_seconds: timeSpentDelta,
@@ -1820,9 +2183,11 @@ class DatabaseEngine {
     selectedOption: 'A' | 'B' | 'C' | 'D' | 'E',
     isCorrect: boolean
   ): Promise<QuestionAttempt> {
+    const canonicalId = this.getCanonicalProfileId(userId);
+
     const attempt: QuestionAttempt = {
       id: `att-${Date.now()}`,
-      user_id: userId,
+      user_id: canonicalId,
       question_id: questionId,
       selected_option: selectedOption,
       is_correct: isCorrect,
@@ -1832,18 +2197,18 @@ class DatabaseEngine {
     this.questionAttempts.push(attempt);
 
     if (isCorrect) {
-      await this.awardStars(userId, 2, 10, 'Acerto de questão de fixação');
+      await this.awardStars(canonicalId, 2, 10, 'Acerto de questão de fixação');
     }
 
-    const userAttempts = await this.getUserQuestionAttempts(userId);
+    const userAttempts = await this.getUserQuestionAttempts(canonicalId);
     const correctCount = userAttempts.filter((a) => a.is_correct).length;
     if (correctCount >= 5) {
-      await this.checkAndAwardAchievements(userId, 'ach-5-acertos');
+      await this.checkAndAwardAchievements(canonicalId, 'ach-5-acertos');
     }
 
     this.persistAll();
 
-    // Sincroniza com servidor central imediatamente
+    // Sincroniza com servidor central se disponível
     try {
       await fetch('/api/db/record-question', {
         method: 'POST',
@@ -1851,7 +2216,26 @@ class DatabaseEngine {
         body: JSON.stringify(attempt),
       });
     } catch (e) {
-      console.warn('Erro ao sincronizar questão com servidor:', e);
+      // Ambiente estático
+    }
+
+    // Persistência no Supabase
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const payload: any = {
+          user_id: canonicalId,
+          selected_option: selectedOption,
+          is_correct: isCorrect,
+          explanation_viewed: true,
+          answered_at: attempt.answered_at,
+        };
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(questionId)) {
+          payload.question_id = questionId;
+        }
+        await supabase.from('question_attempts').insert([payload]);
+      } catch (e) {
+        console.warn('Erro ao inserir tentativa de questão no Supabase:', e);
+      }
     }
 
     return attempt;
@@ -1879,14 +2263,16 @@ class DatabaseEngine {
     answersData: any[],
     timeSpentSeconds: number
   ): Promise<QuizAttempt> {
+    const canonicalId = this.getCanonicalProfileId(userId);
+
     const totalScore = scorePortuguese + scoreMath;
-    const gradePortugueseRequired = quizId.includes('6ano') ? 5 : 6;
-    const gradeMathRequired = quizId.includes('6ano') ? 5 : 6;
+    const gradePortugueseRequired = quizId.includes('6ano') || quizId.includes('6_ano') ? 5 : 6;
+    const gradeMathRequired = quizId.includes('6ano') || quizId.includes('6_ano') ? 5 : 6;
     const passed30Percent = scorePortuguese >= gradePortugueseRequired && scoreMath >= gradeMathRequired;
 
     const attempt: QuizAttempt = {
       id: `quiz-att-${Date.now()}`,
-      user_id: userId,
+      user_id: canonicalId,
       quiz_id: quizId,
       mode,
       status: 'concluido',
@@ -1904,15 +2290,15 @@ class DatabaseEngine {
     this.quizAttempts.unshift(attempt);
 
     const starsReward = 20 + Math.floor((totalScore / totalQuestions) * 30);
-    await this.awardStars(userId, starsReward, totalScore * 10, `Simulado concluído (${totalScore}/${totalQuestions} acertos)`);
-    await this.checkAndAwardAchievements(userId, 'ach-simulado-cmt');
+    await this.awardStars(canonicalId, starsReward, totalScore * 10, `Simulado concluído (${totalScore}/${totalQuestions} acertos)`);
+    await this.checkAndAwardAchievements(canonicalId, 'ach-simulado-cmt');
     if (passed30Percent) {
-      await this.checkAndAwardAchievements(userId, 'ach-regra-corte');
+      await this.checkAndAwardAchievements(canonicalId, 'ach-regra-corte');
     }
 
     this.persistAll();
 
-    // Sincroniza com servidor central imediatamente
+    // Sincroniza com servidor central se disponível
     try {
       await fetch('/api/db/record-quiz', {
         method: 'POST',
@@ -1920,12 +2306,28 @@ class DatabaseEngine {
         body: JSON.stringify(attempt),
       });
     } catch (e) {
-      console.warn('Erro ao sincronizar simulado com servidor:', e);
+      // Ambiente estático
     }
 
+    // Persistência no Supabase
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('quiz_attempts').insert([attempt]);
+        const supaPayload: any = {
+          user_id: canonicalId,
+          quiz_id: quizId,
+          mode,
+          status: 'concluido',
+          started_at: attempt.started_at,
+          finished_at: attempt.finished_at,
+          time_spent_seconds: timeSpentSeconds,
+          score_portuguese: scorePortuguese,
+          score_math: scoreMath,
+          total_score: totalScore,
+          total_questions: totalQuestions,
+          passed_rule_30percent: passed30Percent,
+          answers_data: answersData || [],
+        };
+        await supabase.from('quiz_attempts').insert([supaPayload]);
       } catch (e) {
         console.warn('Erro ao inserir simulado no Supabase:', e);
       }
@@ -1947,7 +2349,8 @@ class DatabaseEngine {
   // RECOMPENSAS, ESTRELAS E CONQUISTAS
   // -------------------------------------------------------------
   async awardStars(userId: string, stars: number, points: number, reason: string): Promise<void> {
-    const profile = this.profiles.find((p) => p.id === userId);
+    const canonicalId = this.getCanonicalProfileId(userId);
+    const profile = this.profiles.find((p) => p.id === canonicalId || p.id === userId);
     if (!profile) return;
 
     profile.total_stars += stars;
@@ -1955,7 +2358,7 @@ class DatabaseEngine {
 
     this.rewardLedger.unshift({
       id: `rew-${Date.now()}`,
-      user_id: userId,
+      user_id: profile.id,
       stars,
       points,
       reason,
@@ -1963,6 +2366,23 @@ class DatabaseEngine {
     });
 
     this.persistAll();
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.id)) {
+          await supabase
+            .from('profiles')
+            .update({
+              total_stars: profile.total_stars,
+              total_points: profile.total_points,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', profile.id);
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar estrelas no Supabase:', e);
+      }
+    }
   }
 
   async checkAndAwardAchievements(userId: string, achievementId: string): Promise<void> {

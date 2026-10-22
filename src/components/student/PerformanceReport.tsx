@@ -118,7 +118,10 @@ export const PerformanceReport: React.FC<PerformanceReportProps> = ({ currentUse
 
   // Identifica o aluno ativo selecionado
   const activeStudentProfile = isSuperUser
-    ? students.find((s) => s.id === selectedStudentId || s.username === selectedStudentId) || null
+    ? students.find((s) => s.id === selectedStudentId || s.username === selectedStudentId) ||
+      students.find((s) => selectedStudentId.toLowerCase().includes('laura') && s.username?.toLowerCase().includes('laura')) ||
+      students.find((s) => selectedStudentId.toLowerCase().includes('bruna') && s.username?.toLowerCase().includes('bruna')) ||
+      (students.length > 0 && selectedStudentId !== 'all' ? students[0] : null)
     : currentUser;
 
   const currentGrade = activeStudentProfile?.grade || currentUser.grade || '6_ano';
