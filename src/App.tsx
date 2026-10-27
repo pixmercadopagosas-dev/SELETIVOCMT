@@ -27,6 +27,7 @@ import { SupabaseStatusModal } from './components/common/SupabaseStatusModal';
 import { ThemeSelectorModal } from './components/common/ThemeSelectorModal';
 import { ThemeCompanionWidget } from './components/common/ThemeCompanionWidget';
 import { WelcomeAvatarOsaias } from './components/common/WelcomeAvatarOsaias';
+import { PastExamsSimulator } from './components/student/PastExamsSimulator';
 import { LESSONS_DATA } from './data/curriculumData';
 import {
   GraduationCap,
@@ -587,6 +588,14 @@ function MainApp() {
               {currentTab === 'tutor-ia' && (
                 <AiStudyTutorView
                   currentUser={currentUser}
+                />
+              )}
+
+              {/* ABA: SIMULADO BASEADO EM PROVAS ANTERIORES */}
+              {currentTab === 'simulados-anteriores' && (
+                <PastExamsSimulator
+                  currentUser={currentUser}
+                  onNavigateHome={() => setCurrentTab('inicio')}
                 />
               )}
 

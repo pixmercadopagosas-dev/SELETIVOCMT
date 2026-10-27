@@ -14,6 +14,7 @@ import {
   Database,
   Sparkles,
   X,
+  FileText,
 } from 'lucide-react';
 import { UserRole } from '../../types';
 import { useAppTheme } from '../../lib/themeContext';
@@ -22,6 +23,7 @@ import { OmnitrixDialIcon, renderThemeIcon } from './AlienSvgIcons';
 export type NavTab =
   | 'inicio'
   | 'tutor-ia'
+  | 'simulados-anteriores'
   | 'plano'
   | 'portugues'
   | 'matematica'
@@ -61,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'inicio', label: 'Início', icon: Home },
     { id: 'tutor-ia', label: 'Tutor I.A Tiradentes', icon: Sparkles, highlight: true },
+    { id: 'simulados-anteriores', label: 'Simulado Baseado em Provas Anteriores', icon: FileText, highlight: true },
     { id: 'plano', label: 'Plano de Estudos', icon: CalendarDays },
     { id: 'portugues', label: 'Língua Portuguesa', icon: BookOpen },
     { id: 'matematica', label: 'Matemática', icon: Calculator },
