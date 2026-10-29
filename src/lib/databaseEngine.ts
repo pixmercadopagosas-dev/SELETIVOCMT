@@ -2525,17 +2525,25 @@ class DatabaseEngine {
     this.friendships.push(rel);
 
     const sender = await this.getProfileById(userId);
-    this.notifications.push({
+    const newNotif: AppNotification = {
       id: `notif-${Date.now()}`,
       user_id: target.id,
-      title: 'Nova Solicitação de Amizade',
-      message: `@${sender?.username || 'Um estudante'} enviou uma solicitação para estudar com você.`,
+      title: 'Solicitação de Amizade de Estudos',
+      message: `${sender?.full_name || sender?.username || 'Um estudante'} (@${sender?.username || 'estudante'}) enviou uma solicitação de amizade para estudar com você no CMT XVII. Você aceita o convite?`,
       type: 'amizade',
       is_read: false,
+      action_link: 'comunidade',
+      friendship_id: rel.id,
+      from_user_id: userId,
+      from_username: sender?.username,
+      from_full_name: sender?.full_name,
+      friendship_status: 'pendente',
       created_at: new Date().toISOString(),
-    });
+    };
+    this.notifications.unshift(newNotif);
 
     this.persistAll();
+    this.broadcastChange('FRIEND_REQUEST_SENT', { from: userId, to: target.id, friendshipId: rel.id });
     return rel;
   }
 
@@ -2546,23 +2554,52 @@ class DatabaseEngine {
     req.status = accept ? 'aceita' : 'recusada';
     req.updated_at = new Date().toISOString();
 
+    // Atualiza a notificação recebida por este usuário
+    for (const n of this.notifications) {
+      if (n.friendship_id === requestId && n.user_id === userId) {
+        n.friendship_status = accept ? 'aceita' : 'recusada';
+        n.is_read = true;
+      }
+    }
+
+    const responder = await this.getProfileById(userId);
+
     if (accept) {
       await this.checkAndAwardAchievements(userId, 'ach-amizade');
       await this.checkAndAwardAchievements(req.user_id, 'ach-amizade');
 
-      const responder = await this.getProfileById(userId);
-      this.notifications.push({
+      this.notifications.unshift({
         id: `notif-${Date.now()}`,
         user_id: req.user_id,
-        title: 'Amizade Aceita!',
-        message: `@${responder?.username || 'Seu amigo'} aceitou seu pedido. Agora vocês podem estudar juntos!`,
+        title: 'Amizade de Estudos Confirmada!',
+        message: `${responder?.full_name || responder?.username || 'Seu amigo'} (@${responder?.username || 'amigo'}) aceitou sua solicitação! Agora vocês já podem conversar e estudar juntos na Comunidade Segura.`,
         type: 'amizade',
         is_read: false,
+        action_link: 'comunidade',
+        friendship_id: requestId,
+        from_user_id: userId,
+        from_username: responder?.username,
+        from_full_name: responder?.full_name,
+        friendship_status: 'aceita',
+        created_at: new Date().toISOString(),
+      });
+    } else {
+      this.notifications.unshift({
+        id: `notif-${Date.now()}`,
+        user_id: req.user_id,
+        title: 'Solicitação de Amizade Não Aceita',
+        message: `${responder?.full_name || responder?.username || 'O estudante'} (@${responder?.username || 'estudante'}) não pôde aceitar a solicitação no momento.`,
+        type: 'amizade',
+        is_read: false,
+        action_link: 'comunidade',
+        friendship_id: requestId,
+        friendship_status: 'recusada',
         created_at: new Date().toISOString(),
       });
     }
 
     this.persistAll();
+    this.broadcastChange('FRIEND_REQUEST_RESPONDED', { userId, requestId, accept });
   }
 
   async getSentFriendRequests(userId: string): Promise<{ request: Friendship; toUser: UserProfile }[]> {

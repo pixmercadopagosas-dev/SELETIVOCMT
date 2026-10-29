@@ -249,6 +249,11 @@ export interface AppNotification {
   is_read: boolean;
   action_link?: string;
   created_at: string;
+  friendship_id?: string;
+  from_user_id?: string;
+  from_username?: string;
+  from_full_name?: string;
+  friendship_status?: 'pendente' | 'aceita' | 'recusada';
 }
 
 export interface AuditLog {

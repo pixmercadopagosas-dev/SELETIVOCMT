@@ -662,6 +662,7 @@ function MainApp() {
                 <NotificationsCenter
                   currentUser={currentUser}
                   onRefreshUnreadCount={() => loadUserData(currentUser.id)}
+                  onNavigateToCommunity={() => setCurrentTab('comunidade')}
                 />
               )}
 
