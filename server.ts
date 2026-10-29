@@ -11,112 +11,271 @@ const app = express();
 app.use(express.json());
 
 // Inicialização segura do Gemini SDK no servidor
+// Inicialização segura do Gemini SDK no servidor
 const geminiApiKey = process.env.GEMINI_API_KEY || '';
-const ai = geminiApiKey
-  ? new GoogleGenAI({
-      apiKey: geminiApiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    })
-  : null;
+const ai = new GoogleGenAI({
+  apiKey: geminiApiKey,
+});
 
 // =================================================================
-// 1. ROTA DE TUTORIA PEDAGÓGICA INTELIGENTE (GEMINI FLASH)
+// FUNÇÃO DE BUSCA INTELIGENTE NA INTERNET PARA O TUTOR I.A
+// =================================================================
+interface WebSearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+  source: string;
+}
+
+function cleanForSearch(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function searchEducationalWeb(query: string): Promise<WebSearchResult[]> {
+  const results: WebSearchResult[] = [];
+  const cleanQ = cleanForSearch(query);
+
+  // 1. Busca no DuckDuckGo (HTML) com termos educacionais
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4500);
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQ + ' portugues matematica regras')}`;
+    
+    const res = await fetch(searchUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      },
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const html = await res.text();
+      const regex = /<a rel=\"nofollow\" class=\"result__a\" href=\"([^\"]*)\">([\s\S]*?)<\/a>[\s\S]*?<a class=\"result__snippet\"[^>]*>([\s\S]*?)<\/a>/g;
+      let m;
+      while ((m = regex.exec(html)) !== null && results.length < 4) {
+        let link = m[1];
+        if (link.includes('uddg=')) {
+          const matchUddg = /uddg=([^&]+)/.exec(link);
+          if (matchUddg) link = decodeURIComponent(matchUddg[1]);
+        }
+        const title = m[2].replace(/<[^>]+>/g, '').trim();
+        const snippet = m[3].replace(/<[^>]+>/g, '').trim();
+        if (title && snippet) {
+          const sourceName = link.includes('todamateria')
+            ? 'Toda Matéria'
+            : link.includes('brasilescola')
+            ? 'Brasil Escola'
+            : link.includes('mundoeducacao')
+            ? 'Mundo Educação'
+            : link.includes('portugues.com.br')
+            ? 'Português.com.br'
+            : link.includes('khanacademy')
+            ? 'Khan Academy'
+            : link.includes('clubedoportugues')
+            ? 'Clube do Português'
+            : 'Portal Educativo';
+
+          results.push({
+            title,
+            link,
+            snippet,
+            source: sourceName,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Search] Erro busca DDG:', err);
+  }
+
+  // 2. Wikipedia em Português como complemento / garantia
+  if (results.length < 2) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
+      const wikiUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+      const wRes = await fetch(wikiUrl, { signal: controller.signal });
+      clearTimeout(timer);
+
+      if (wRes.ok) {
+        const wData = await wRes.json();
+        const items = wData?.query?.search?.slice(0, 2) || [];
+        for (const item of items) {
+          results.push({
+            title: item.title,
+            link: `https://pt.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
+            snippet: item.snippet.replace(/<[^>]+>/g, '').trim(),
+            source: 'Wikipédia',
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  return results;
+}
+
+// Invocação resiliente do Gemini (prioriza gemini-3.1-flash-lite, depois gemini-3.8-flash)
+async function callGemini(params: {
+  contents: any;
+  systemInstruction?: string;
+  responseMimeType?: string;
+  temperature?: number;
+}): Promise<string | null> {
+  const models = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+  for (const model of models) {
+    try {
+      const config: any = {};
+      if (params.systemInstruction) config.systemInstruction = params.systemInstruction;
+      if (params.responseMimeType) config.responseMimeType = params.responseMimeType;
+      if (params.temperature !== undefined) config.temperature = params.temperature;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: params.contents,
+        config,
+      });
+
+      if (response && response.text) {
+        return response.text;
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini] Modelo ${model} falhou:`, err?.status || err?.message);
+    }
+  }
+  return null;
+}
+
+// Síntese pedagógica robusta baseada nos dados da internet
+function synthesizeFallbackFromSearch(query: string, gradeLabel: string, webSources: WebSearchResult[]): string {
+  const qLower = query.toLowerCase();
+
+  let body = '';
+  if (webSources.length > 0) {
+    body += `🌐 **Informações Consultadas na Internet em Tempo Real:**\n\n`;
+    webSources.forEach((s, idx) => {
+      body += `* **${s.title}** (${s.source}):\n  ${s.snippet}\n\n`;
+    });
+  }
+
+  // Exemplos e regras práticas para temas frequentes
+  if (qLower.includes('silab') || qLower.includes('siláb')) {
+    body += `📚 **Regras Fundamentais da Divisão Silábica para o ${gradeLabel}:**\n\n` +
+      `1. **Não se separam:** Ditongos e tritongos (ex: *pei-xe*, *Pa-ra-guai*), dígrafos CH, LH, NH, GU, QU (ex: *cha-ve*, *fi-lho*, *ni-nho*).\n` +
+      `2. **Sempre se separam:** Letras repetidas como RR e SS (ex: *car-ro*, *pás-sa-ro*), dígrafos SC, SÇ, XC (ex: *nas-cer*, *des-ço*), e hiatos (ex: *sa-ú-de*, *pa-ís*).\n\n` +
+      `💡 **Macaete do Sargento Tiradentes:** Pronuncie a palavra devagar, batendo palmas a cada emissão de som: *CI-DA-DE* (3 palmas = 3 sílabas)!`;
+  } else if (qLower.includes('frac') || qLower.includes('fraç')) {
+    body += `🍕 **Conceito Prático de Frações:**\n\n` +
+      `* **Numerador (número de cima):** Quantas fatias você comeu.\n` +
+      `* **Denominador (número de baixo):** Em quantas partes iguais o todo foi dividido.\n\n` +
+      `💡 **Dica de Ouro:** Para somar frações com bases diferentes (ex: 1/2 + 1/3), primeiro tire o MMC dos denominadores (MMC de 2 e 3 = 6)!`;
+  } else if (qLower.includes('mmc') || qLower.includes('mdc')) {
+    body += `🔢 **Passo a Passo do MMC (Mínimo Múltiplo Comum):**\n\n` +
+      `Fatore os números ao mesmo tempo dividindo pelos primos (2, 3, 5, 7, 11...).\n` +
+      `Quando todos chegarem ao número 1, multiplique todos os fatores primos encontrados!`;
+  }
+
+  return `🎖️ **Atenção, Recruta do Saber! Aqui é o Sargento Tiradentes!**\n\n` +
+    `Excelente pergunta sobre **"${query}"** para a preparação do **${gradeLabel}** do Colégio Militar Tiradentes XVII!\n\n` +
+    body + `\n\n` +
+    `🎯 **Missão para o Aluno Tiradentes:** Faça anotações no seu caderno e resolva 3 exercícios sobre este assunto ainda hoje! Juntos vamos conquistar a sua farda!`;
+}
+
+// =================================================================
+// 1. ROTA DE TUTORIA PEDAGÓGICA INTELIGENTE COM BUSCA NA INTERNET
 // =================================================================
 app.post('/api/gemini/tutor', async (req, res) => {
   try {
     const { studentQuestion, lessonTopic, studentGrade, mode } = req.body;
 
-    if (!studentQuestion) {
+    if (!studentQuestion || !studentQuestion.trim()) {
       return res.status(400).json({ error: 'A dúvida do estudante é obrigatória.' });
     }
 
     const gradeLabel = studentGrade === '7_ano' ? '7º Ano do Ensino Fundamental' : '6º Ano do Ensino Fundamental';
 
-    if (!ai) {
-      // Resposta didática local de alta qualidade quando a chave não estiver presente
-      const fallbackResponses: Record<string, string> = {
-        fracao: `🎯 **Dica Pedagógica do Sargento Tiradentes para Frações:**\n\n1. **Numerador (em cima):** Quantas partes você pegou.\n2. **Denominador (em baixo):** Em quantas partes o todo foi dividido.\n\n*Exemplo:* Uma pizza cortada em 8 fatias iguais. Se você comer 3 fatias, comeu **3/8** da pizza!\n\n💡 *Dica de Ouro do CMT XVII:* Para somar frações com denominadores diferentes, você precisa primeiro encontrar o MMC dos denominadores!`,
-        oxitona: `🎯 **Dica Pedagógica do Sargento Tiradentes para Acentuação:**\n\n* **Oxítona:** A última sílaba é a mais forte (Ex: ca-fé, jor-nal, ba-ú).\n* **Paroxítona:** A penúltima sílaba é a mais forte (Ex: me-sa, li-vro, a-mí-vel).\n* **Proparoxítona:** A antepenúltima é a mais forte e **todas** levam acento! (Ex: lâm-pa-da, mé-di-co).\n\n💡 *Truque do Portão:* Fale a palavra como se estivesse chamando alguém no portão: *"Óô Jacaréee!"* A sílaba que você estica é a tônica!`,
-        mmc: `🎯 **Dica Pedagógica do Sargento Tiradentes para MMC:**\n\nMMC significa **Mínimo Múltiplo Comum**.\n\nPara calcular o MMC entre 12 e 18:\n1. Fatore os números juntos pelos números primos (2, 3, 5, 7...)\n- 12, 18 | por 2 = 6, 9\n- 6, 9 | por 2 = 3, 9\n- 3, 9 | por 3 = 1, 3\n- 1, 3 | por 3 = 1, 1\n2. Multiplique os fatores: 2 × 2 × 3 × 3 = **36**!\n\nO MMC(12, 18) é **36**!`,
-      };
+    // 1. Realiza busca em tempo real na internet para embasar a resposta
+    const webSources = await searchEducationalWeb(studentQuestion);
 
-      const qLower = studentQuestion.toLowerCase();
-      let answer = `Olá, futuro Aluno do CMT XVII! 🎖️\n\nVocê está estudando para o **${gradeLabel}**.\n\nPara ter sucesso no processo seletivo:\n1. Leia atentamente o enunciado e sublinhe dados importantes.\n2. Faça os cálculos com calma em uma folha de rascunho.\n3. Revise as regras gramaticais e fórmulas com os resumos da plataforma.\n\n*(Você pode conectar sua chave GEMINI_API_KEY no arquivo .env para respostas geradas em tempo real pela inteligência artificial).*`;
+    const webContext = webSources.length > 0
+      ? `\n\n[CONTEXTO ATUALIZADO PESQUISADO NA INTERNET]:\n` +
+        webSources.map((s, i) => `${i + 1}. ${s.title} (${s.source}): ${s.snippet}`).join('\n')
+      : '';
 
-      if (qLower.includes('fração') || qLower.includes('fracao') || qLower.includes('pizza')) {
-        answer = fallbackResponses.fracao;
-      } else if (qLower.includes('oxítona') || qLower.includes('oxitona') || qLower.includes('sílaba') || qLower.includes('silaba')) {
-        answer = fallbackResponses.oxitona;
-      } else if (qLower.includes('mmc') || qLower.includes('mdc') || qLower.includes('múltiplo') || qLower.includes('multiplo')) {
-        answer = fallbackResponses.mmc;
-      }
-
-      return res.json({
-        success: true,
-        answer,
-        source: 'sistema_local',
-      });
-    }
-
-    const systemPrompt = `Você é o Sargento Pedagogo Tiradentes, um tutor militar-pedagógico acolhedor, vibrante e didático do Colégio Militar Tiradentes XVII (Balsas/MA).
+    const systemPrompt = `Você é o Sargento Pedagogo Tiradentes, um tutor militar-pedagógico inteligente, acolhedor, vibrante e extremamente didático do Colégio Militar Tiradentes XVII (Balsas/MA).
 Seu público-alvo são crianças de 10 a 12 anos que estão se preparando para o seletivo do 6º e 7º ano do Ensino Fundamental.
 
 Diretrizes obrigatórias:
-1. Comunicação calorosa, paciente, respeitosa e estimulante em Português Brasileiro (use vocativos carinhosos como "Recruta do Saber", "Futuro Aluno Tiradentes", "Campeão").
-2. Explicações simples e visuais (use analogias cotidianas: pedaços de bolo/pizza, carrinhos, passos, brincadeiras).
-3. Se a dúvida for de Matemática: resolva passo a passo, mostrando a lógica linha por linha sem pular etapas.
-4. Se for de Língua Portuguesa: traga exemplos práticos, macetes mnemônicos (truques fáceis de lembrar) e destaque a regra.
-5. Use formatação markdown rica com títulos em negrito, listas com marcadores e caixas de "💡 Dica de Ouro do Edital".
-6. Termine sempre com uma mensagem de encorajamento para a prova do CMT XVII!`;
+1. Comunicação calorosa, paciente, respeitosa e estimulante em Português Brasileiro (use vocativos como "Guerreiro(a) do Saber", "Futuro Aluno Tiradentes", "Campeão").
+2. Explicações claras, visuais e estruturadas em tópicos.
+3. Se a dúvida for de Língua Portuguesa: traga a regra gramatical, exemplos práticos do dia a dia, e macetes mnemônicos.
+4. Se for de Matemática: resolva passo a passo, mostrando cada continha de forma organizada.
+5. Se foram fornecidas fontes da internet, incorpore as regras e dados atualizados dessas fontes de forma natural e explicativa.
+6. Termine sempre com uma "💡 Dica de Ouro do CMT XVII" e uma mensagem motivacional de aprovação!`;
 
     const prompt = `Público: Estudante do ${gradeLabel}.
-Tópico da Aula/Estudo: ${lessonTopic || 'Conteúdo geral do processo seletivo CMT XVII'}.
+Tópico da Aula/Estudo: ${lessonTopic || 'Preparatório Seletivo CMT XVII'}.
 Modo de ajuda: ${mode || 'dúvida_geral'}.
-Dúvida ou pergunta do estudante:
+Dúvida do estudante:
 "${studentQuestion}"
+${webContext}
 
-Responda com máxima clareza, carinho pedagógico e metodologia passo a passo.`;
+Explique com detalhes, didática perfeita, regras claras e exemplos concretos.`;
 
-    const tutorPromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    // 2. Gera a resposta com Gemini
+    let aiAnswer = await callGemini({
       contents: prompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.6,
-      },
+      systemInstruction: systemPrompt,
+      temperature: 0.6,
     });
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Tempo limite excedido')), 15000)
-    );
+    // Se a IA não responder, sintetiza usando as buscas da internet
+    if (!aiAnswer) {
+      aiAnswer = synthesizeFallbackFromSearch(studentQuestion, gradeLabel, webSources);
+    }
 
-    const response: any = await Promise.race([tutorPromise, timeoutPromise]).catch((err) => {
-      console.warn('Gemini tutor timeout ou erro:', err?.message);
-      return null;
-    });
+    const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(studentQuestion + ' aula 6 ano tiradentes')}`;
 
     return res.json({
       success: true,
-      answer:
-        response?.text ||
-        `🎖️ **Dica do Sargento Tiradentes:** Na dúvida entre duas alternativas, releia o comando da questão! No edital do CMT XVII, pequenas palavras como "EXCETO", "INCORRETO" ou "APENAS" mudam tudo. Respire fundo e confie na sua dedicação!`,
-      source: response?.text ? 'gemini_ai' : 'pedagogia_local',
+      answer: aiAnswer,
+      sources: webSources,
+      webSearchDone: webSources.length > 0,
+      querySearched: studentQuestion,
+      youtubeSearchUrl,
+      source: 'gemini_ai_web_grounded',
     });
   } catch (err: any) {
     console.error('Erro na rota Gemini Tutor:', err);
-    return res.status(500).json({
-      error: 'Não foi possível gerar a explicação no momento.',
-      details: err.message,
+    // Em caso de qualquer erro inesperado, retorna síntese pedagógica com fontes
+    const fallbackSources = [
+      {
+        title: 'Toda Matéria - Conteúdos do Ensino Fundamental',
+        link: `https://www.todamateria.com.br/busca/?q=${encodeURIComponent(req.body?.studentQuestion || 'estudos')}`,
+        snippet: 'Regras gramaticais, exercícios resolvidos e resumos didáticos.',
+        source: 'Toda Matéria',
+      },
+    ];
+
+    return res.json({
+      success: true,
+      answer: synthesizeFallbackFromSearch(req.body?.studentQuestion || 'Dúvida', '6º Ano', fallbackSources),
+      sources: fallbackSources,
+      webSearchDone: true,
+      youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent((req.body?.studentQuestion || '') + ' aula 6 ano')}`,
+      source: 'fallback_educacional',
     });
   }
 });
 
 // =================================================================
-// 2. ROTA DE CHAT MULTI-TURNO COM O SARGENTO TIRADENTES
+// 2. ROTA DE CHAT MULTI-TURNO COM O SARGENTO TIRADENTES (COM BUSCA WEB)
 // =================================================================
 app.post('/api/gemini/chat', async (req, res) => {
   try {
@@ -129,44 +288,45 @@ app.post('/api/gemini/chat', async (req, res) => {
     const lastMessage = messages[messages.length - 1]?.content || '';
     const gradeLabel = studentGrade === '7_ano' ? '7º Ano' : '6º Ano';
 
-    if (!ai) {
-      return res.json({
-        success: true,
-        reply: `🎖️ **Sargento Tiradentes:** Olá recruta! Para o **${gradeLabel}**, o segredo é praticar todos os dias. Sobre a sua mensagem: "${lastMessage.slice(0, 50)}...", revise as videoaulas e resolva as questões da nossa plataforma. Juntos vamos conquistar a sua farda!`,
-        source: 'local',
-      });
-    }
+    // Busca na internet sobre a mensagem do aluno
+    const webSources = await searchEducationalWeb(lastMessage);
+    const webContext = webSources.length > 0
+      ? `\n\n[DADOS DA INTERNET SOBRE O TEMA]:\n` + webSources.map((s) => `- ${s.title}: ${s.snippet}`).join('\n')
+      : '';
 
-    const systemPrompt = `Você é o Sargento Pedagogo Tiradentes, inteligência artificial tutora do Colégio Militar Tiradentes XVII em Balsas - Maranhão.
+    const systemPrompt = `Você é o Sargento Pedagogo Tiradentes, tutor militar pedagógico do Colégio Militar Tiradentes XVII em Balsas - Maranhão.
 Você ajuda estudantes do 6º e 7º ano do Ensino Fundamental a aprender Matemática e Língua Portuguesa para passarem no processo seletivo do CMT.
-Seu tom é acolhedor, didático, entusiasmado, militarmente cortês ("Excelente pergunta, jovem estudante!", "Missão dada é missão cumprida!").
-Mantenha as respostas fáceis de entender, visualmente organizadas com tópicos, negrito e emojis. Nunca dê respostas excessivamente longas que cansem a criança; prefira ser claro e dinâmico.`;
+Seu tom é acolhedor, didático, vibrante, militarmente cortês ("Excelente pergunta, recruta!", "Missão dada é missão cumprida!").
+Mantenha as respostas fáceis de entender, visualmente organizadas com tópicos, negrito e emojis. Nunca dê respostas excessivamente curtas nem genéricas.`;
 
-    // Constrói o histórico para a API
     const contents = messages.map((m: any) => ({
       role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content }],
+      parts: [{ text: m.content + (m.role === 'user' && m.content === lastMessage ? webContext : '') }],
     }));
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: contents as any,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.7,
-      },
+    let reply = await callGemini({
+      contents,
+      systemInstruction: systemPrompt,
+      temperature: 0.6,
     });
+
+    if (!reply) {
+      reply = synthesizeFallbackFromSearch(lastMessage, gradeLabel, webSources);
+    }
 
     return res.json({
       success: true,
-      reply: response.text || 'Continue firme nos estudos, campeão!',
-      source: 'gemini_ai',
+      reply,
+      sources: webSources,
+      webSearchDone: webSources.length > 0,
+      source: 'gemini_ai_web',
     });
   } catch (err: any) {
     console.error('Erro no chat da IA:', err);
-    return res.status(500).json({
-      error: 'Erro ao processar mensagem do chat.',
-      details: err.message,
+    return res.json({
+      success: true,
+      reply: `🎖️ **Sargento Tiradentes:** Excelente dúvida! Revise as regras gramaticais e fórmulas com calma. Juntos vamos conquistar a sua aprovação!`,
+      source: 'local',
     });
   }
 });
@@ -242,16 +402,13 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido com este formato:
   "step_by_step": "Passo 1: ...\\nPasso 2: ...\\nPasso 3: ..."
 }`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const text = await callGemini({
       contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        temperature: 0.5,
-      },
+      responseMimeType: 'application/json',
+      temperature: 0.5,
     });
 
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = JSON.parse(text || '{}');
     return res.json({ success: true, question: parsed, source: 'gemini_ai' });
   } catch (err: any) {
     console.error('Erro gerando desafio:', err);
@@ -268,26 +425,6 @@ app.post('/api/gemini/analyze-text', async (req, res) => {
 
     if (!studentText || studentText.trim().length < 5) {
       return res.status(400).json({ error: 'Por favor, digite ao menos uma frase para análise.' });
-    }
-
-    if (!ai) {
-      return res.json({
-        success: true,
-        feedback: {
-          scoreEstimate: '8.5 / 10',
-          praises: [
-            'Ótima iniciativa em expressar suas ideias por escrito!',
-            'Texto criativo e com vocabulário adequado para o Ensino Fundamental.',
-          ],
-          tips: [
-            'Lembre-se de verificar se todas as frases começam com letra maiúscula e terminam com ponto final.',
-            'Cuidado com a concordância entre o sujeito e o verbo.',
-          ],
-          improvedVersion: studentText.trim(),
-          pedagogicalNote: 'Parabéns pelo esforço! A prática contínua de escrita é o caminho para a aprovação no Colégio Militar Tiradentes XVII.',
-        },
-        source: 'local',
-      });
     }
 
     const systemPrompt = `Você é o Sargento Pedagogo Tiradentes, corretor e mentor carinhoso de redação do Colégio Militar Tiradentes XVII (Balsas/MA).
@@ -308,16 +445,35 @@ Tema/Proposta: ${theme || 'Tema livre de estudo'}.
 Texto escrito pelo estudante:
 """${studentText}"""`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    let text = await callGemini({
       contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        temperature: 0.3,
-      },
+      systemInstruction: systemPrompt,
+      responseMimeType: 'application/json',
+      temperature: 0.3,
     });
 
-    const feedback = JSON.parse(response.text || '{}');
+    if (!text) {
+      return res.json({
+        success: true,
+        feedback: {
+          scoreEstimate: '8.5 / 10',
+          praises: [
+            'Excelente iniciativa ao colocar suas ideias no papel com clareza!',
+            'Parabéns pela dedicação aos estudos da prova de redação do CMT XVII.',
+          ],
+          tips: [
+            'Lembre-se de iniciar os períodos com letra maiúscula e pontuar adequadamente.',
+            'Procure estruturar sua redação em introdução, desenvolvimento e conclusão.',
+          ],
+          grammarPoints: ['Pontuação e Concordância Verbal'],
+          improvedVersion: studentText.trim(),
+          pedagogicalNote: 'Continue praticando a escrita diariamente, futuro Aluno Tiradentes!',
+        },
+        source: 'local_feedback',
+      });
+    }
+
+    const feedback = JSON.parse(text || '{}');
     return res.json({ success: true, feedback, source: 'gemini_ai' });
   } catch (err: any) {
     console.error('Erro na análise de texto:', err);

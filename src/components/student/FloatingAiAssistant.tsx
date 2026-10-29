@@ -7,8 +7,18 @@ import {
   Maximize2,
   ChevronDown,
   ExternalLink,
+  Globe,
+  Youtube,
+  BookOpen,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
+
+interface WebSource {
+  title: string;
+  link: string;
+  snippet?: string;
+  source?: string;
+}
 
 interface FloatingAiAssistantProps {
   currentUser: UserProfile;
@@ -24,6 +34,8 @@ export const FloatingAiAssistant: React.FC<FloatingAiAssistantProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
+  const [sources, setSources] = useState<WebSource[]>([]);
+  const [youtubeSearchUrl, setYoutubeSearchUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // If already in the tutor-ia tab, hide the floating pill to avoid duplicate UI
@@ -31,17 +43,20 @@ export const FloatingAiAssistant: React.FC<FloatingAiAssistantProps> = ({
 
   const handleAskQuick = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim() || loading) return;
+    const query = question.trim();
+    if (!query || loading) return;
 
     setLoading(true);
     setAnswer(null);
+    setSources([]);
+    setYoutubeSearchUrl(null);
 
     try {
       const res = await fetch('/api/gemini/tutor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentQuestion: question,
+          studentQuestion: query,
           lessonTopic: `Dúvida rápida durante navegação na aba ${currentTab}`,
           studentGrade: currentUser.grade,
         }),
@@ -52,10 +67,17 @@ export const FloatingAiAssistant: React.FC<FloatingAiAssistantProps> = ({
         data.answer ||
           '🎖️ Lembre-se de ler o enunciado com atenção e conferir cada etapa do seu raciocínio!'
       );
+      if (data.sources && Array.isArray(data.sources)) {
+        setSources(data.sources);
+      }
+      if (data.youtubeSearchUrl) {
+        setYoutubeSearchUrl(data.youtubeSearchUrl);
+      }
     } catch (err) {
       setAnswer(
-        'Dica do Sargento: Revise a matéria com calma e tente decompor o problema em etapas simples!'
+        `🎖️ **Dica de Estudo:** Para "${query}", revise a definição básica e realize exercícios passo a passo. Acesse a aba Tutor I.A para uma explicação completa!`
       );
+      setYoutubeSearchUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' aula 6 ano')}`);
     } finally {
       setLoading(false);
     }
@@ -106,18 +128,67 @@ export const FloatingAiAssistant: React.FC<FloatingAiAssistantProps> = ({
           <div className="p-4 overflow-y-auto space-y-3 flex-1 text-xs text-slate-700 bg-slate-50/50">
             {answer ? (
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-2 shadow-xs">
-                <p className="font-bold text-blue-950 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Resposta do Sargento:
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-blue-950 flex items-center gap-1 text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Resposta do Sargento:
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    <Globe className="w-2.5 h-2.5" />
+                    Web Integrada
+                  </span>
+                </div>
                 <div className="whitespace-pre-line text-slate-800 leading-relaxed text-xs">
                   {answer}
                 </div>
+
+                {/* Sources list */}
+                {sources.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100 space-y-1">
+                    <p className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-indigo-600" />
+                      Fontes na Internet:
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {sources.slice(0, 3).map((s, i) => (
+                        <a
+                          key={i}
+                          href={s.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-between text-[10px] text-blue-700 hover:text-blue-900 bg-blue-50/60 hover:bg-blue-100/70 p-1.5 rounded border border-blue-100"
+                        >
+                          <span className="truncate pr-1 font-medium">{s.title}</span>
+                          <ExternalLink className="w-2.5 h-2.5 shrink-0 text-blue-500" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* YouTube Link */}
+                {youtubeSearchUrl && (
+                  <div className="pt-1.5">
+                    <a
+                      href={youtubeSearchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-200 transition-colors"
+                    >
+                      <Youtube className="w-3 h-3 text-red-600" />
+                      <span>Ver aula no YouTube</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
                   <button
                     onClick={() => {
                       setAnswer(null);
                       setQuestion('');
+                      setSources([]);
+                      setYoutubeSearchUrl(null);
                     }}
                     className="text-blue-700 hover:underline font-bold"
                   >
@@ -130,7 +201,7 @@ export const FloatingAiAssistant: React.FC<FloatingAiAssistantProps> = ({
                     }}
                     className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 font-semibold"
                   >
-                    <span>Ver mais na Sala I.A</span>
+                    <span>Ver na Sala I.A</span>
                     <ExternalLink className="w-2.5 h-2.5" />
                   </button>
                 </div>

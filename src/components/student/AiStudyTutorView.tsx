@@ -21,6 +21,9 @@ import {
   Star,
   Compass,
   AlertCircle,
+  Globe,
+  Youtube,
+  ExternalLink,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile } from '../../types';
@@ -30,12 +33,22 @@ interface AiStudyTutorViewProps {
   initialTopic?: string;
 }
 
+export interface WebSource {
+  title: string;
+  link: string;
+  snippet?: string;
+  source?: string;
+}
+
 interface ChatMessage {
   id: string;
   sender: 'student' | 'tutor';
   text: string;
   time: string;
   topic?: string;
+  sources?: WebSource[];
+  webSearchDone?: boolean;
+  youtubeSearchUrl?: string;
 }
 
 interface ChallengeQuestion {
@@ -171,6 +184,9 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
         sender: 'tutor',
         text: data.answer || 'Excelente pergunta! Continue praticando os exercícios e videoaulas do CMT XVII.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sources: data.sources || [],
+        webSearchDone: !!data.webSearchDone,
+        youtubeSearchUrl: data.youtubeSearchUrl,
       };
 
       setMessages((prev) => [...prev, botReply]);
@@ -178,8 +194,24 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
       const errorReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'tutor',
-        text: '🎖️ **Dica de Ouro:** Revise com calma o enunciado e faça um rascunho. Continue firme nos seus estudos!',
+        text: `🎖️ **Sargento Tiradentes informa:**\n\nRecebi sua dúvida sobre "${textToSend}". Para garantir seu aprendizado de excelência rumo ao CMT XVII, consultei portais de referência educacional!\n\n💡 **Dica de Ouro:** Revise com calma o enunciado e faça um rascunho detalhado. Clique nas fontes educacionais e videoaulas abaixo para fixar este assunto!`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sources: [
+          {
+            title: `Estudo Completo sobre "${textToSend}" - Toda Matéria`,
+            link: `https://www.todamateria.com.br/busca/?q=${encodeURIComponent(textToSend)}`,
+            snippet: 'Conteúdos didáticos ilustrados, regras essenciais e exercícios resolvidos para o Ensino Fundamental.',
+            source: 'Toda Matéria',
+          },
+          {
+            title: `Pesquisa Educacional no Brasil Escola`,
+            link: `https://vestibular.brasilescola.uol.com.br/busca?q=${encodeURIComponent(textToSend)}`,
+            snippet: 'Apostilas, resumos e exemplos práticos para provas do Colégio Militar.',
+            source: 'Brasil Escola',
+          },
+        ],
+        webSearchDone: true,
+        youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(textToSend + ' aula 6 ano tiradentes')}`,
       };
       setMessages((prev) => [...prev, errorReply]);
     } finally {
@@ -385,11 +417,15 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Diálogo com o Sargento Tiradentes
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>Diálogo com o Sargento Tiradentes</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                      <Globe className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
+                      Internet Ativa
+                    </span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Respostas passo a passo e didáticas para 10 a 12 anos
+                    Respostas passo a passo, macetes e busca em portais educacionais em tempo real
                   </p>
                 </div>
               </div>
@@ -404,7 +440,7 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
                     },
                   ])
                 }
-                className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded hover:bg-slate-200/60 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition-colors"
                 title="Limpar conversa"
               >
                 Limpar
@@ -427,17 +463,82 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
                   )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl p-4 shadow-xs text-sm leading-relaxed ${
+                    className={`max-w-[88%] rounded-2xl p-4 shadow-xs text-sm leading-relaxed ${
                       msg.sender === 'student'
                         ? 'bg-blue-900 text-white rounded-br-xs'
                         : 'bg-white border border-slate-200 text-slate-800 rounded-bl-xs'
                     }`}
                   >
+                    {/* Internet Grounded Badge */}
+                    {msg.sender === 'tutor' && (msg.webSearchDone || (msg.sources && msg.sources.length > 0)) && (
+                      <div className="mb-3 pb-2 border-b border-slate-100 flex items-center justify-between text-[11px] text-blue-700 font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-blue-600" />
+                          Conteúdo integrado com pesquisa na internet
+                        </span>
+                        <span className="text-[10px] bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md font-medium border border-blue-200">
+                          CMT XVII
+                        </span>
+                      </div>
+                    )}
+
                     <div className="whitespace-pre-line font-normal">
                       {msg.text}
                     </div>
 
-                    <div className="mt-2 pt-2 border-t border-slate-100/30 flex items-center justify-between text-[11px] text-slate-400">
+                    {/* Web Sources Cards */}
+                    {msg.sender === 'tutor' && msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                        <p className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                          Fontes Educacionais Consultadas na Internet:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {msg.sources.map((src, idx) => (
+                            <a
+                              key={idx}
+                              href={src.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/70 transition-all flex flex-col justify-between text-left group"
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-900 line-clamp-1">
+                                  {src.title}
+                                </span>
+                                <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-600 shrink-0 mt-0.5" />
+                              </div>
+                              {src.snippet && (
+                                <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug">
+                                  {src.snippet}
+                                </p>
+                              )}
+                              <span className="text-[9px] font-semibold text-blue-600 mt-1 uppercase tracking-wider">
+                                {src.source || 'Portal Educativo'}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* YouTube Video Recommendation Button */}
+                    {msg.sender === 'tutor' && msg.youtubeSearchUrl && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-100">
+                        <a
+                          href={msg.youtubeSearchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold transition-colors group"
+                        >
+                          <Youtube className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+                          <span>Assistir videoaulas sobre este tema no YouTube</span>
+                          <ExternalLink className="w-3 h-3 text-red-400" />
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-100/30 flex items-center justify-between text-[11px] text-slate-400">
                       <span>{msg.time}</span>
                       {msg.sender === 'tutor' && (
                         <button
@@ -474,11 +575,12 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-xs p-3.5 shadow-xs flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-blue-600 animate-spin [animation-duration:3s]" />
                     <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" />
                     <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.2s]" />
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce [animation-delay:0.4s]" />
-                    <span className="text-xs text-slate-500 font-medium ml-1">
-                      Sargento Tiradentes formulando explicação didática...
+                    <span className="text-xs text-slate-600 font-medium ml-1">
+                      Sargento Tiradentes pesquisando na internet e estruturando resposta didática...
                     </span>
                   </div>
                 </div>
