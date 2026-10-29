@@ -126,6 +126,44 @@ export const INITIAL_REAL_PROFILES: UserProfile[] = [
     created_at: '2026-10-19T03:32:18.755849+00:00',
     updated_at: '2026-10-21T18:00:00.000Z',
   },
+  {
+    id: '5f1b8c92-1243-4a7e-91dd-7a3e9c123456',
+    username: 'marcos_silva',
+    full_name: 'Marcos Silva',
+    email: 'marcos@estudante.cmt.br',
+    grade: '6_ano',
+    avatar_url: 'cadet_green',
+    account_status: 'aprovada',
+    role: 'estudante',
+    guardian_name: 'Antônio Silva',
+    guardian_phone: '(99) 98222-3344',
+    guardian_cpf: '',
+    agreed_terms: true,
+    total_stars: 80,
+    total_points: 430,
+    study_streak_days: 3,
+    created_at: '2026-10-20T08:00:00.000Z',
+    updated_at: '2026-10-22T10:00:00.000Z',
+  },
+  {
+    id: '6c2d9e03-2354-5b8f-a2ee-8b4f0d234567',
+    username: 'ana_beatriz',
+    full_name: 'Ana Beatriz Santos',
+    email: 'anabeatriz@estudante.cmt.br',
+    grade: '7_ano',
+    avatar_url: 'cadet_purple',
+    account_status: 'aprovada',
+    role: 'estudante',
+    guardian_name: 'Carla Santos',
+    guardian_phone: '(99) 98333-4455',
+    guardian_cpf: '',
+    agreed_terms: true,
+    total_stars: 110,
+    total_points: 620,
+    study_streak_days: 5,
+    created_at: '2026-10-21T09:00:00.000Z',
+    updated_at: '2026-10-23T11:00:00.000Z',
+  },
 ];
 
 export const INITIAL_REAL_REQUESTS: AccessRequest[] = [
@@ -411,6 +449,24 @@ export function isFictitiousUser(user?: { id?: string; user_id?: string; usernam
     username === 'bruna' ||
     id === '8771b727-3d5e-47cb-b3a6-6db0abea8dc5' ||
     email === 'bruna@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  // 4. Marcos Silva
+  if (
+    username === 'marcos_silva' ||
+    id === '5f1b8c92-1243-4a7e-91dd-7a3e9c123456' ||
+    email === 'marcos@estudante.cmt.br'
+  ) {
+    return false;
+  }
+
+  // 5. Ana Beatriz Santos
+  if (
+    username === 'ana_beatriz' ||
+    id === '6c2d9e03-2354-5b8f-a2ee-8b4f0d234567' ||
+    email === 'anabeatriz@estudante.cmt.br'
   ) {
     return false;
   }
@@ -2507,6 +2563,108 @@ class DatabaseEngine {
     }
 
     this.persistAll();
+  }
+
+  async getSentFriendRequests(userId: string): Promise<{ request: Friendship; toUser: UserProfile }[]> {
+    const requests = this.friendships.filter((f) => f.user_id === userId && f.status === 'pendente');
+    return requests
+      .map((r) => {
+        const toUser = this.profiles.find((p) => p.id === r.friend_id);
+        return toUser ? { request: r, toUser } : null;
+      })
+      .filter(Boolean) as { request: Friendship; toUser: UserProfile }[];
+  }
+
+  async getFriendshipRelation(userA: string, userB: string): Promise<Friendship | null> {
+    const rel = this.friendships.find(
+      (f) => (f.user_id === userA && f.friend_id === userB) || (f.user_id === userB && f.friend_id === userA)
+    );
+    return rel ? { ...rel } : null;
+  }
+
+  async acceptFriendship(userA: string, userB: string): Promise<Friendship> {
+    let rel = this.friendships.find(
+      (f) => (f.user_id === userA && f.friend_id === userB) || (f.user_id === userB && f.friend_id === userA)
+    );
+
+    if (rel) {
+      rel.status = 'aceita';
+      rel.updated_at = new Date().toISOString();
+    } else {
+      rel = {
+        id: `fr-${Date.now()}`,
+        user_id: userA,
+        friend_id: userB,
+        status: 'aceita',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      this.friendships.push(rel);
+    }
+
+    await this.checkAndAwardAchievements(userA, 'ach-amizade');
+    await this.checkAndAwardAchievements(userB, 'ach-amizade');
+
+    const userAProfile = await this.getProfileById(userA);
+    const userBProfile = await this.getProfileById(userB);
+
+    this.notifications.push({
+      id: `notif-${Date.now()}-1`,
+      user_id: userA,
+      title: 'Amizade de Estudos Confirmada!',
+      message: `Você e @${userBProfile?.username || 'seu colega'} agora são colegas de estudo. Já podem conversar e trocar ideias!`,
+      type: 'amizade',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+
+    this.notifications.push({
+      id: `notif-${Date.now()}-2`,
+      user_id: userB,
+      title: 'Amizade de Estudos Confirmada!',
+      message: `Você e @${userAProfile?.username || 'seu colega'} agora são colegas de estudo. Já podem conversar e trocar ideias!`,
+      type: 'amizade',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+
+    this.persistAll();
+    return { ...rel };
+  }
+
+  async searchStudents(query: string, currentUserId: string): Promise<UserProfile[]> {
+    const clean = (query || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const all = await this.getAllProfiles();
+    return all.filter((p) => {
+      if (p.id === currentUserId) return false;
+      if (p.role === 'superusuario') return false;
+      if (p.account_status !== 'aprovada') return false;
+      if (!clean) return true;
+
+      const pUser = (p.username || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const pName = (p.full_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      return pUser.includes(clean) || pName.includes(clean);
+    });
+  }
+
+  async getSuggestedStudents(currentUserId: string): Promise<UserProfile[]> {
+    const all = await this.getAllProfiles();
+    const friends = await this.getFriends(currentUserId);
+    const friendIds = new Set(friends.map((f) => f.id));
+
+    return all.filter((p) => {
+      if (p.id === currentUserId) return false;
+      if (p.role === 'superusuario') return false;
+      if (p.account_status !== 'aprovada') return false;
+      if (friendIds.has(p.id)) return false;
+      return true;
+    });
   }
 
   async getMessages(userA: string, userB: string): Promise<ChatMessage[]> {
