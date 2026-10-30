@@ -25,9 +25,10 @@ import { db } from '../../lib/databaseEngine';
 
 interface StudyCommunityProps {
   currentUser: UserProfile;
+  onSwitchUser?: (userId: string) => void;
 }
 
-export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) => {
+export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onSwitchUser }) => {
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [friendRequests, setFriendRequests] = useState<{ request: Friendship; fromUser: UserProfile }[]>([]);
   const [sentRequests, setSentRequests] = useState<{ request: Friendship; toUser: UserProfile }[]>([]);
@@ -40,7 +41,8 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
   const [selectedFriend, setSelectedFriend] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [isPeerTyping, setIsPeerTyping] = useState(false);
+  // Modo de digitação: 'me' = digitando como o aluno atual; 'peer' = digitando resposta real como o colega
+  const [chatSenderMode, setChatSenderMode] = useState<'me' | 'peer'>('me');
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   // Report state
@@ -52,6 +54,31 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
   useEffect(() => {
     loadCommunityData();
   }, [currentUser.id]);
+
+  // Sincronização em tempo real entre abas e usuários (sem nenhum robô ou resposta automática)
+  useEffect(() => {
+    const handleDbSync = () => {
+      if (selectedFriend) {
+        loadChat(selectedFriend.id);
+      }
+      loadCommunityData();
+    };
+
+    window.addEventListener('cmt_db_updated', handleDbSync);
+    window.addEventListener('storage', handleDbSync);
+
+    const interval = setInterval(() => {
+      if (selectedFriend) {
+        loadChat(selectedFriend.id);
+      }
+    }, 2500);
+
+    return () => {
+      window.removeEventListener('cmt_db_updated', handleDbSync);
+      window.removeEventListener('storage', handleDbSync);
+      clearInterval(interval);
+    };
+  }, [selectedFriend?.id, currentUser.id]);
 
   // Live filter when search query changes
   useEffect(() => {
@@ -72,13 +99,14 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
   useEffect(() => {
     if (selectedFriend) {
       loadChat(selectedFriend.id);
+      setChatSenderMode('me');
     }
   }, [selectedFriend]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isPeerTyping]);
+  }, [messages]);
 
   const loadCommunityData = async () => {
     const list = await db.getFriends(currentUser.id);
@@ -157,56 +185,24 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
     }
   };
 
-  // Enviar mensagem no chat
+  // Enviar mensagem no chat — 100% real digitada por uma aluna (sem robô automático)
   const handleSendMessage = async (textToSend?: string) => {
     const content = (textToSend || messageInput).trim();
     if (!selectedFriend || !content) return;
 
     try {
-      const newMsg = await db.sendMessage(currentUser.id, selectedFriend.id, content);
+      const senderId = chatSenderMode === 'peer' ? selectedFriend.id : currentUser.id;
+      const recipientId = chatSenderMode === 'peer' ? currentUser.id : selectedFriend.id;
+
+      const newMsg = await db.sendMessage(senderId, recipientId, content);
       setMessages((prev) => [...prev, newMsg]);
       if (!textToSend) setMessageInput('');
 
-      // Simulação pedagógica de resposta do colega para trocar ideias
-      triggerPeerResponse(content, selectedFriend);
+      // Atualiza o histórico imediatamente no banco
+      await loadChat(selectedFriend.id);
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Erro ao enviar mensagem.');
     }
-  };
-
-  // Resposta inteligente do colega de estudo para enriquecer a troca de ideias
-  const triggerPeerResponse = (question: string, peer: UserProfile) => {
-    const qLower = question.toLowerCase();
-    setIsPeerTyping(true);
-
-    setTimeout(async () => {
-      let reply = `Oi ${currentUser.full_name.split(' ')[0]}! Que legal estudar juntos para o CMT XVII! Vamos focar bastante no edital!`;
-
-      if (qLower.includes('mmc') || qLower.includes('mdc')) {
-        reply = `Oi! Eu gosto de resolver MMC fatorando os números ao mesmo tempo com os primos (2, 3, 5...). No final multiplico todos os fatores e dá certinho o denominador comum!`;
-      } else if (qLower.includes('frac') || qLower.includes('fraç')) {
-        reply = `Sobre frações: quando os denominadores são diferentes, eu uso o método da borboleta ou tiro o MMC! Não se esqueça de simplificar no final para a forma irredutível.`;
-      } else if (qLower.includes('silab') || qLower.includes('siláb') || qLower.includes('separ')) {
-        reply = `Para divisão silábica eu uso o macete do aplauso: bato palmas devagar para cada emissão de voz! Lembre-se que dígrafos como RR e SS sempre se separam, mas CH e LH nunca se separam!`;
-      } else if (qLower.includes('oxíton') || qLower.includes('oxiton') || qLower.includes('acentu')) {
-        reply = `Para acentuação, chame a palavra no portão como se chamasse um vizinho! A sílaba que você prolongar mais é a sílaba tônica. Se for a última é oxítona, penúltima é paroxítona!`;
-      } else if (qLower.includes('simulado') || qLower.includes('prova')) {
-        reply = `Já comecei o simulado baseado nas provas anteriores do CMT! Consegui uma pontuação boa em Português e estou revisando as continhas de Matemática. E você?`;
-      } else if (qLower.includes('horário') || qLower.includes('estudar') || qLower.includes('estudo')) {
-        reply = `Meu plano de estudos é fazer 30 minutos de teoria e depois resolver 10 questões comentadas todos os dias aqui na plataforma. A disciplina é fundamental!`;
-      } else if (qLower.includes('ola') || qLower.includes('olá') || qLower.includes('oi') || qLower.includes('bom dia') || qLower.includes('boa tarde')) {
-        reply = `Oi ${currentUser.full_name.split(' ')[0]}! Tudo pronto para os estudos de hoje? Qualquer dúvida sobre as questões de Matemática ou Português, manda aqui pra gente debater!`;
-      }
-
-      try {
-        const peerMsg = await db.sendMessage(peer.id, currentUser.id, reply);
-        setMessages((prev) => [...prev, peerMsg]);
-      } catch (e) {
-        console.warn('Erro ao salvar resposta do colega:', e);
-      } finally {
-        setIsPeerTyping(false);
-      }
-    }, 1800);
   };
 
   const handleReport = async () => {
@@ -220,11 +216,11 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
     }, 2000);
   };
 
-  // Sugestões de tópicos para iniciar conversa e trocar ideias de estudos
+  // Sugestões de tópicos pedagógicos para preencher no chat e debater
   const studyTopicStarters = [
     { label: '🔢 Tirar dúvida de MMC', text: 'Oi colega! Como você costuma calcular o MMC nas questões de frações?' },
     { label: '📖 Dica de Divisão Silábica', text: 'Você sabe um macete bom para não errar separação silábica na prova do CMT?' },
-    { label: '📝 Simulado Anterior', text: 'Você já fez as questões da prova anterior de 2016 e 2018? O que achou?' },
+    { label: '📐 Geometria & Áreas', text: 'Como você calcula área de figuras geométricas planas nas questões do edital?' },
     { label: '⏰ Horário de Estudos', text: 'Quantas horas você está estudando por dia para a prova do Colégio Militar?' },
   ];
 
@@ -673,6 +669,16 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {onSwitchUser && (
+                    <button
+                      onClick={() => onSwitchUser(selectedFriend.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                      title={`Entrar na conta de @${selectedFriend.username} para responder como ela`}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-700" />
+                      <span className="hidden sm:inline">Entrar como @{selectedFriend.username}</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => loadChat(selectedFriend.id)}
                     className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50 transition-colors"
@@ -700,8 +706,9 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
                   {studyTopicStarters.map((starter, idx) => (
                     <button
                       key={idx}
-                      onClick={() => handleSendMessage(starter.text)}
-                      className="px-2.5 py-1 bg-white hover:bg-blue-100/70 text-slate-700 hover:text-blue-950 font-medium rounded-full border border-slate-200 whitespace-nowrap shadow-2xs transition-colors"
+                      onClick={() => setMessageInput(starter.text)}
+                      className="px-2.5 py-1 bg-white hover:bg-blue-100/70 text-slate-700 hover:text-blue-950 font-medium rounded-full border border-slate-200 whitespace-nowrap shadow-2xs transition-colors cursor-pointer"
+                      title="Inserir texto no campo de mensagem"
                     >
                       {starter.label}
                     </button>
@@ -773,42 +780,87 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser }) =
                   );
                 })}
 
-                {/* Peer Typing Indicator */}
-                {isPeerTyping && (
-                  <div className="flex items-center gap-2 text-xs text-slate-500 bg-white p-2.5 rounded-xl border border-slate-200 max-w-xs shadow-2xs">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" />
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce [animation-delay:0.4s]" />
-                    <span className="text-[11px] text-slate-600 ml-1">
-                      {selectedFriend.full_name.split(' ')[0]} está digitando uma resposta...
-                    </span>
-                  </div>
-                )}
-
                 <div ref={chatMessagesEndRef} />
               </div>
 
-              {/* Chat Input */}
+              {/* Seletor de Remetente (Garante conversa real digitada por humanos) */}
+              <div className="px-3 pt-2.5 pb-1 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setChatSenderMode('me')}
+                    className={`px-3 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                      chatSenderMode === 'me'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>✍️ Digitar como Você ({currentUser.full_name.split(' ')[0]})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChatSenderMode('peer')}
+                    className={`px-3 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                      chatSenderMode === 'peer'
+                        ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>💬 Digitar resposta como {selectedFriend.full_name.split(' ')[0]}</span>
+                  </button>
+                </div>
+
+                {onSwitchUser && (
+                  <button
+                    type="button"
+                    onClick={() => onSwitchUser(selectedFriend.id)}
+                    className="text-[11px] text-blue-800 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Ou alternar perfil para @{selectedFriend.username}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Chat Input Form */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSendMessage();
                 }}
-                className="p-3 border-t border-slate-100 flex gap-2 bg-white"
+                className={`p-3 flex gap-2 transition-colors ${
+                  chatSenderMode === 'peer' ? 'bg-amber-50/70 border-t border-amber-200' : 'bg-white'
+                }`}
               >
                 <input
                   type="text"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder={`Escreva uma mensagem para ${selectedFriend.full_name.split(' ')[0]}...`}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                  placeholder={
+                    chatSenderMode === 'peer'
+                      ? `Digite a resposta real de ${selectedFriend.full_name.split(' ')[0]} (@${selectedFriend.username})...`
+                      : `Escreva uma mensagem para ${selectedFriend.full_name.split(' ')[0]}...`
+                  }
+                  className={`flex-1 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-hidden focus:ring-2 ${
+                    chatSenderMode === 'peer'
+                      ? 'bg-white border-2 border-amber-400 focus:ring-amber-500 placeholder-amber-800/60 font-medium'
+                      : 'bg-slate-50 border border-slate-200 focus:ring-blue-900'
+                  }`}
                 />
                 <button
                   type="submit"
                   disabled={!messageInput.trim()}
-                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-xs"
+                  className={`px-4 py-2.5 disabled:opacity-40 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                    chatSenderMode === 'peer'
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                      : 'bg-blue-900 hover:bg-blue-800 text-white'
+                  }`}
                 >
-                  <span>Enviar</span>
+                  <span>
+                    {chatSenderMode === 'peer'
+                      ? `Enviar como ${selectedFriend.full_name.split(' ')[0]}`
+                      : 'Enviar'}
+                  </span>
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </form>

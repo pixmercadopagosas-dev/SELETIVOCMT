@@ -645,6 +645,18 @@ class DatabaseEngine {
     if (storedLogs.length > 0) {
       this.auditLogs = storedLogs;
     }
+    const storedFriendships = safeStorageGet<Friendship[]>(STORAGE_KEYS.FRIENDSHIPS, []);
+    if (storedFriendships.length > 0) {
+      this.friendships = storedFriendships;
+    }
+    const storedMessages = safeStorageGet<ChatMessage[]>(STORAGE_KEYS.MESSAGES, []);
+    if (storedMessages.length > 0) {
+      this.messages = storedMessages;
+    }
+    const storedNotifs = safeStorageGet<AppNotification[]>(STORAGE_KEYS.NOTIFICATIONS, []);
+    if (storedNotifs.length > 0) {
+      this.notifications = storedNotifs;
+    }
   }
 
   // Sincronização em tempo real com o servidor central (/api/db/state)
@@ -2737,6 +2749,7 @@ class DatabaseEngine {
     };
     this.messages.push(newMsg);
     this.persistAll();
+    this.broadcastChange('MESSAGE_SENT', { senderId, recipientId, message: newMsg });
     return newMsg;
   }
 

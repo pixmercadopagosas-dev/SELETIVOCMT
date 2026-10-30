@@ -27,7 +27,6 @@ import { SupabaseStatusModal } from './components/common/SupabaseStatusModal';
 import { ThemeSelectorModal } from './components/common/ThemeSelectorModal';
 import { ThemeCompanionWidget } from './components/common/ThemeCompanionWidget';
 import { WelcomeAvatarOsaias } from './components/common/WelcomeAvatarOsaias';
-import { PastExamsSimulator } from './components/student/PastExamsSimulator';
 import { LESSONS_DATA } from './data/curriculumData';
 import {
   GraduationCap,
@@ -591,14 +590,6 @@ function MainApp() {
                 />
               )}
 
-              {/* ABA: SIMULADO BASEADO EM PROVAS ANTERIORES */}
-              {currentTab === 'simulados-anteriores' && (
-                <PastExamsSimulator
-                  currentUser={currentUser}
-                  onNavigateHome={() => setCurrentTab('inicio')}
-                />
-              )}
-
               {currentTab === 'plano' && (
                 <StudyPlanner
                   currentUser={currentUser}
@@ -655,7 +646,10 @@ function MainApp() {
               )}
 
               {currentTab === 'comunidade' && (
-                <StudyCommunity currentUser={currentUser} />
+                <StudyCommunity
+                  currentUser={currentUser}
+                  onSwitchUser={handleSwitchUser}
+                />
               )}
 
               {currentTab === 'notificacoes' && (

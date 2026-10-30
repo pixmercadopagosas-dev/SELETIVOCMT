@@ -117,15 +117,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onNavigateTab('simulados-anteriores')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black rounded-xl border border-amber-300 shadow-md transition-all hover:scale-102 cursor-pointer"
-                  title="Treinar com Provas Anteriores Oficiais (Dicas, Vídeos e Resoluções)"
-                >
-                  <Sparkles className="w-4 h-4 text-slate-950" />
-                  <span>Provas Anteriores (Dicas & Vídeos)</span>
-                </button>
-
-                <button
                   onClick={() => onNavigateTab('simulados')}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-black/40 hover:bg-black/60 text-white text-xs sm:text-sm font-bold rounded-xl border border-white/20 transition-colors"
                 >
@@ -327,39 +318,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             )}
           </div>
         </div>
-      </div>
-
-      {/* NOVO CARTÃO DE DESTAQUE: SIMULADO BASEADO EM PROVAS ANTERIORES */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white border-2 border-amber-500/40 shadow-lg flex flex-col md:flex-row items-center justify-between gap-5">
-        <div className="flex items-center gap-4">
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-amber-400 shrink-0 shadow-md">
-            <img
-              src="/assets/aistudio/1792634685275_25b5af36.jpg"
-              alt="Instrutor Osaias"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-400/30">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              Treinamento Oficial
-            </div>
-            <h3 className="text-lg font-black text-white">
-              Simulado Baseado em Provas Anteriores do CMT
-            </h3>
-            <p className="text-xs text-blue-100 max-w-xl leading-relaxed">
-              60 questões reais das provas do Colégio Militar Tiradentes (2016 e 2018), com dicas de estudo, parabéns no acerto, explicações pedagógicas completas nos erros e videoaulas do YouTube!
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => onNavigateTab('simulados-anteriores')}
-          className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-md transition-all transform hover:scale-105 active:scale-95 shrink-0 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span>Abrir Simulado de Provas Anteriores</span>
-          <ArrowRight className="w-4 h-4 text-slate-950" />
-        </button>
       </div>
 
       {/* Subject Cards (Língua Portuguesa & Matemática) */}
