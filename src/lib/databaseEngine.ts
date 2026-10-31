@@ -866,18 +866,18 @@ class DatabaseEngine {
     this.messages = safeStorageGet<ChatMessage[]>(STORAGE_KEYS.MESSAGES, []);
     this.notifications = safeStorageGet<AppNotification[]>(STORAGE_KEYS.NOTIFICATIONS, []);
 
-    // Garante notificação oficial avisando os alunos sobre as 30 novas questões adicionadas
+    // Garante notificação oficial avisando os alunos sobre o simulado de 60 questões
     for (const prof of this.profiles) {
       if (prof.role === 'estudante') {
         const hasNotif = this.notifications.some(
-          (n) => n.user_id === prof.id && n.id.includes('novas-questoes-cmt-30')
+          (n) => n.user_id === prof.id && n.id.includes('simulado-cmt-60')
         );
         if (!hasNotif) {
           this.notifications.unshift({
-            id: `notif-novas-questoes-cmt-30-${prof.id}`,
+            id: `notif-simulado-cmt-60-${prof.id}`,
             user_id: prof.id,
-            title: '📢 Novas 30 Questões nos Simulados do CMT!',
-            message: 'O sistema foi atualizado com mais 30 questões comentadas de Português e Matemática fiéis ao Edital Nº 001/26! Se errar qualquer alternativa, você verá a explicação detalhada do erro para fixar o aprendizado.',
+            title: '📢 Simulado Oficial de 60 Questões Disponível!',
+            message: 'O Simulado Oficial do CMT foi expandido para 60 questões completas (30 de Língua Portuguesa e 30 de Matemática) fiéis ao Edital Nº 001/26! Se errar qualquer alternativa, você verá a explicação detalhada do erro para fixar o aprendizado.',
             type: 'aviso',
             is_read: false,
             action_link: 'simulados',

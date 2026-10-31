@@ -37,15 +37,13 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   onFinishExam,
 }) => {
   const is6Ano = currentUser.grade === '6_ano';
-  const totalQuestions = is6Ano ? 30 : 40;
-  const portugueseCount = is6Ano ? 15 : 20;
-  const mathCount = is6Ano ? 15 : 20;
-  const minRequiredPerSubject = is6Ano ? 5 : 6; // 30% regra do edital Art. 25
+  const totalQuestions = 60; // Total oficial exigido: 60 questões (30 Português + 30 Matemática)
+  const portugueseCount = 30;
+  const mathCount = 30;
+  const minRequiredPerSubject = 9; // 30% de 30 questões conforme Art. 25 do Edital CMT XVII
 
-  // Seleção de Edição do Simulado: 'novas_questoes' (+30 novas questões do edital) ou 'bateria_1'
-  const [selectedEdition, setSelectedEdition] = useState<'novas_questoes' | 'bateria_1'>('novas_questoes');
-
-  const getQuestionsForEdition = (edition: 'novas_questoes' | 'bateria_1'): Question[] => {
+  // Função geradora de todas as 60 questões oficiais do edital
+  const buildExamQuestions = (): Question[] => {
     const portQuestions = OFFICIAL_QUESTIONS.filter(
       (q) => (q.grade_id === currentUser.grade || q.grade_id === '6_ano') && q.subject_id === 'portugues'
     );
@@ -54,25 +52,23 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
     );
 
     const list: Question[] = [];
-    if (edition === 'novas_questoes') {
-      // 15 mais recentes de português (as 15 novas questões adicionadas)
-      const portSlice = portQuestions.slice(Math.max(0, portQuestions.length - portugueseCount));
-      // 15 mais recentes de matemática (as 15 novas questões adicionadas)
-      const mathSlice = mathQuestions.slice(Math.max(0, mathQuestions.length - mathCount));
-      list.push(...portSlice);
-      list.push(...mathSlice);
-    } else {
-      list.push(...portQuestions.slice(0, portugueseCount));
-      list.push(...mathQuestions.slice(0, mathCount));
+    // 30 questões de Língua Portuguesa (1 a 30)
+    for (let i = 0; i < portugueseCount; i++) {
+      const q = portQuestions[i % portQuestions.length];
+      list.push({ ...q, id: q.id });
+    }
+    // 30 questões de Matemática (31 a 60)
+    for (let i = 0; i < mathCount; i++) {
+      const q = mathQuestions[i % mathQuestions.length];
+      list.push({ ...q, id: q.id });
     }
     return list;
   };
 
-  const [examQuestions, setExamQuestions] = useState<Question[]>(() => getQuestionsForEdition('novas_questoes'));
+  const [examQuestions, setExamQuestions] = useState<Question[]>(buildExamQuestions);
 
-  const handleChangeEdition = (edition: 'novas_questoes' | 'bateria_1') => {
-    setSelectedEdition(edition);
-    setExamQuestions(getQuestionsForEdition(edition));
+  const handleRestartExam = () => {
+    setExamQuestions(buildExamQuestions());
     setCurrentIndex(0);
     setSelectedAnswers({});
     setFlaggedForReview({});
@@ -507,16 +503,10 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
               Voltar ao Início
             </button>
             <button
-              onClick={() => {
-                setIsFinished(false);
-                setSelectedAnswers({});
-                setFlaggedForReview({});
-                setSecondsRemaining(4 * 3600);
-                setCurrentIndex(0);
-              }}
-              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm"
+              onClick={handleRestartExam}
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
             >
-              Fazer Outro Simulado
+              Fazer Outro Simulado (60 Questões)
             </button>
           </div>
         </div>
@@ -525,7 +515,7 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   }
 
   // ==============================================================
-  // TELA DE EXECUÇÃO DO SIMULADO CRONOMETRADO
+  // TELA DE EXECUÇÃO DO SIMULADO CRONOMETRADO (60 QUESTÕES)
   // ==============================================================
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-200">
@@ -535,109 +525,139 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
           <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
             SIMULADO OFICIAL • EDITAL Nº 001/26 CMT XVII
           </span>
-          <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-            <span>{is6Ano ? 'Simulado 6º Ano (30 Questões)' : 'Simulado 7º Ano (40 Questões)'}</span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-400/30">
-              {selectedEdition === 'novas_questoes' ? '+30 Novas Questões' : 'Bateria 1'}
+          <h2 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+            <span>Simulado 6º Ano (60 Questões)</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/40">
+              30 Port + 30 Mat
             </span>
           </h2>
         </div>
 
-        {/* Seletor de Edição: Novas 30 Questões vs Bateria 1 */}
-        <div className="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700 text-xs">
+        <div className="flex items-center gap-3">
+          {/* Timer display */}
+          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-amber-400 font-mono font-bold text-base shadow-inner">
+            <Clock className="w-5 h-5 text-amber-400" />
+            <span>{formatTimer(secondsRemaining)}</span>
+          </div>
+
+          {/* Finish button */}
           <button
-            type="button"
-            onClick={() => handleChangeEdition('novas_questoes')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedEdition === 'novas_questoes'
-                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black shadow-xs'
-                : 'text-slate-300 hover:text-white'
-            }`}
+            onClick={() => setShowConfirmModal(true)}
+            className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Simulado 2 (+30 Novas)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleChangeEdition('bateria_1')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-              selectedEdition === 'bateria_1'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>Simulado 1</span>
+            Entregar Simulado
           </button>
         </div>
-
-        {/* Timer display */}
-        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-amber-400 font-mono font-bold text-base shadow-inner">
-          <Clock className="w-5 h-5 text-amber-400" />
-          <span>{formatTimer(secondsRemaining)}</span>
-        </div>
-
-        {/* Finish button */}
-        <button
-          onClick={() => setShowConfirmModal(true)}
-          className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
-        >
-          Entregar Simulado
-        </button>
       </div>
 
-      {/* Banner Informativo do Edital e Correção Pedagógica */}
-      {selectedEdition === 'novas_questoes' && (
-        <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-amber-900 bg-white">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>
-              <strong>Novas 30 Questões Ativas:</strong> Questões 1 a 15 de Língua Portuguesa e 16 a 30 de Matemática. Ao entregar o simulado, veja a explicação detalhada de cada erro para aprender!
-            </span>
-          </div>
-          <span className="shrink-0 text-[11px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-            Gabarito Comentado
+      {/* Banner Informativo do Simulado de 60 Questões */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-blue-900/10 to-amber-500/10 border border-amber-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-800 bg-white shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
+          <span>
+            <strong>Simulado Completo de 60 Questões:</strong> 30 de Língua Portuguesa (1 a 30) e 30 de Matemática (31 a 60). Regra do Edital (Art. 25): mínimo de 30% em cada disciplina (9 acertos em Português e 9 em Matemática). Ao entregar, veja a explicação detalhada de cada erro para aprender!
           </span>
         </div>
-      )}
+        <span className="shrink-0 text-[11px] font-black uppercase text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-300">
+          60 Questões Comentadas
+        </span>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column: Questions Grid & Stats */}
+        {/* Left Column: Questions Grid & Stats (Dividido em Português e Matemática) */}
         <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-            <span>Questões</span>
-            <span>
-              {answeredCount}/{totalQuestions} Respondidas
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 pb-2 border-b border-slate-100">
+            <span>Todas as Questões</span>
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-mono text-[11px]">
+              {answeredCount}/{totalQuestions}
             </span>
           </div>
 
-          <div className="grid grid-cols-5 gap-1.5 max-h-[360px] overflow-y-auto p-1">
-            {examQuestions.map((_, idx) => {
-              const isAnswered = Boolean(selectedAnswers[idx]);
-              const isFlagged = Boolean(flaggedForReview[idx]);
-              const isCurrent = currentIndex === idx;
+          <div className="max-h-[500px] overflow-y-auto pr-1 space-y-4">
+            {/* Bloco 1: Língua Portuguesa (1 a 30) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-black text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg border border-blue-200">
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Português (1 a 30)</span>
+                </span>
+                <span className="text-[10px] text-blue-700 font-bold">
+                  {Object.keys(selectedAnswers).filter((k) => Number(k) < 30).length}/30
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 p-1">
+                {examQuestions.slice(0, 30).map((_, idx) => {
+                  const isAnswered = Boolean(selectedAnswers[idx]);
+                  const isFlagged = Boolean(flaggedForReview[idx]);
+                  const isCurrent = currentIndex === idx;
 
-              let style = 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-              if (isCurrent) {
-                style = 'bg-blue-900 text-white font-extrabold ring-2 ring-blue-500';
-              } else if (isFlagged) {
-                style = 'bg-amber-100 text-amber-900 border border-amber-400 font-bold';
-              } else if (isAnswered) {
-                style = 'bg-emerald-100 text-emerald-900 font-bold';
-              }
+                  let style = 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+                  if (isCurrent) {
+                    style = 'bg-blue-900 text-white font-extrabold ring-2 ring-blue-500';
+                  } else if (isFlagged) {
+                    style = 'bg-amber-100 text-amber-900 border border-amber-400 font-bold';
+                  } else if (isAnswered) {
+                    style = 'bg-emerald-100 text-emerald-900 font-bold';
+                  }
 
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors relative ${style}`}
-                >
-                  {idx + 1}
-                  {isFlagged && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 absolute top-1 right-1" />
-                  )}
-                </button>
-              );
-            })}
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors relative cursor-pointer ${style}`}
+                    >
+                      {idx + 1}
+                      {isFlagged && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 absolute top-1 right-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bloco 2: Matemática (31 a 60) */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[11px] font-black text-red-900 bg-red-50/80 px-2.5 py-1 rounded-lg border border-red-200">
+                <span className="flex items-center gap-1.5">
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Matemática (31 a 60)</span>
+                </span>
+                <span className="text-[10px] text-red-700 font-bold">
+                  {Object.keys(selectedAnswers).filter((k) => Number(k) >= 30).length}/30
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 p-1">
+                {examQuestions.slice(30, 60).map((_, i) => {
+                  const idx = i + 30;
+                  const isAnswered = Boolean(selectedAnswers[idx]);
+                  const isFlagged = Boolean(flaggedForReview[idx]);
+                  const isCurrent = currentIndex === idx;
+
+                  let style = 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+                  if (isCurrent) {
+                    style = 'bg-blue-900 text-white font-extrabold ring-2 ring-blue-500';
+                  } else if (isFlagged) {
+                    style = 'bg-amber-100 text-amber-900 border border-amber-400 font-bold';
+                  } else if (isAnswered) {
+                    style = 'bg-emerald-100 text-emerald-900 font-bold';
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors relative cursor-pointer ${style}`}
+                    >
+                      {idx + 1}
+                      {isFlagged && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 absolute top-1 right-1" />
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
           </div>
 
           <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1.5">

@@ -210,17 +210,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 rounded-md">
-                📢 Novidade no Sistema
+                📢 Simulado Oficial Completo
               </span>
               <span className="text-xs text-amber-300 font-semibold">
                 Edital Nº 001/26 • CMT XVII
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-white">
-              +30 Novas Questões Oficiais Adicionadas aos Simulados do CMT!
+              Simulado Oficial de 60 Questões (30 Português + 30 Matemática)!
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Disponibilizamos 30 questões inéditas comentadas (15 de Língua Portuguesa e 15 de Matemática) para você treinar com o tempo real de prova. Se você errar, o sistema explica o motivo exato para você aprender e garantir sua vaga!
+              O simulado oficial agora possui 60 questões comentadas para você treinar no formato integral de prova. Se você errar qualquer questão, o sistema explica o motivo pedagógico do erro para você fixar o conteúdo e conquistar sua vaga!
             </p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           onClick={() => onNavigateTab('simulados')}
           className="w-full md:w-auto shrink-0 px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 transition-all hover:scale-102 cursor-pointer"
         >
-          <span>Resolver Simulados Agora</span>
+          <span>Fazer Simulado (60 Questões)</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

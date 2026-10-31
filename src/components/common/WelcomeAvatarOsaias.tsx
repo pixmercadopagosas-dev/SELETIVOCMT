@@ -55,13 +55,13 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
       highlight: false,
     },
     {
-      badge: 'Novas Questões no Sistema',
-      text: `Atenção: acabamos de adicionar mais 30 questões comentadas de Português e Matemática nos Simulados do CMT! Se errar, explicamos exatamente o porquê para você aprender.`,
+      badge: 'Simulado de 60 Questões',
+      text: `Atenção: o Simulado do CMT agora possui 60 questões completas (30 de Português e 30 de Matemática)! Se errar, explicamos exatamente o porquê para você aprender.`,
       highlight: true,
     },
   ];
 
-  const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos. Acredite sempre no seu potencial! Atenção: temos mais 30 novas questões comentadas de Português e Matemática disponíveis nos Simulados do CMT com explicação detalhada para cada erro. Bons estudos rumo à aprovação!`;
+  const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos e acredite sempre no seu potencial! Atenção: o simulado do Colégio Militar agora possui sessenta questões comentadas com trinta de Português e trinta de Matemática, com explicação detalhada para cada erro. Bons estudos rumo à aprovação!`;
 
   // Start speech synthesis
   const speakText = (text: string) => {
@@ -317,10 +317,10 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
                 <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
                 <div>
                   <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 block mb-0.5">
-                    📢 Novidade Oficial no Sistema
+                    📢 Simulado Oficial Completo (60 Questões)
                   </span>
                   <p className="text-xs sm:text-sm text-white leading-snug font-semibold">
-                    Adicionamos <strong className="text-yellow-300 underline font-black">+30 novas questões comentadas</strong> nos <strong className="text-blue-300">Simulados do CMT</strong> (Português e Matemática)!
+                    O Simulado Oficial do CMT agora possui <strong className="text-yellow-300 underline font-black">60 questões completas</strong> (30 de Língua Portuguesa e 30 de Matemática)!
                   </p>
                   <p className="text-[11px] text-slate-300 mt-1">
                     Se errar alguma opção, o sistema explica o motivo exato do erro para você aprender com excelência.
@@ -345,7 +345,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
                 className="flex-1 sm:flex-initial px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/25 flex items-center justify-center gap-1.5 transform active:scale-95 transition-all text-xs sm:text-sm cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-slate-950" />
-                <span>Ver Novos Simulados (30Q)</span>
+                <span>Ver Simulado Completo (60Q)</span>
               </button>
 
               <button
