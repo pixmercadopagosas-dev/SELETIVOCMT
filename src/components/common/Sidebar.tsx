@@ -243,8 +243,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-[11px] font-black text-amber-300 block truncate group-hover:text-amber-200">
                   Instrutor Osaias
                 </span>
-                <span className="text-[9px] text-slate-300 block truncate">
-                  Assistente Virtual • Mensagem
+                <span className="text-[9px] text-amber-400/90 font-medium block truncate">
+                  Voz Masculina Grave • Ouvir
                 </span>
               </div>
             </button>

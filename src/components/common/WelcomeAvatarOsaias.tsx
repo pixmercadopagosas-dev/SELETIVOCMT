@@ -63,7 +63,107 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
 
   const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos e acredite sempre no seu potencial! Atenção: o simulado do Colégio Militar agora possui sessenta questões comentadas com trinta de Português e trinta de Matemática, com explicação detalhada para cada erro. Bons estudos rumo à aprovação!`;
 
-  // Start speech synthesis
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Carrega e atualiza vozes em tempo real (essencial para dispositivos móveis Android e iOS)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    const loadVoices = () => {
+      try {
+        const vList = window.speechSynthesis.getVoices();
+        if (vList && vList.length > 0) {
+          setAvailableVoices(vList);
+        }
+      } catch (err) {
+        console.warn('Erro ao listar vozes:', err);
+      }
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  // Seleciona com rigor a melhor voz masculina em português do dispositivo
+  const findDeepMasculineVoice = (voiceList: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
+    if (!voiceList || voiceList.length === 0) return null;
+
+    const ptVoices = voiceList.filter((v) => {
+      const l = (v.lang || '').toLowerCase();
+      return l.startsWith('pt') || l.includes('por') || l.includes('brazil');
+    });
+
+    const pool = ptVoices.length > 0 ? ptVoices : voiceList;
+
+    // Palavras-chave masculinas reconhecidas em Android, Windows, iOS, Mac e Linux
+    const maleKeywords = [
+      'daniel',       // Microsoft Daniel (Windows pt-BR masculino)
+      'felipe',       // Apple Felipe (iOS / macOS pt-BR masculino)
+      'antonio',      // Microsoft Antonio (Windows pt-BR masculino)
+      'jorge',        // Android / Apple Jorge
+      'ricardo',      // Ricardo masculino
+      'arthur',       // Apple Arthur
+      'pt-br-x-jab',  // Google TTS Android Masculino 1
+      'pt-br-x-yab',  // Google TTS Android Masculino 2
+      'pt-br-x-afb',  // Google TTS Android Masculino 3
+      'pt-br-x-jbb',  // Google TTS Android Masculino 4
+      'male',         // Palavra-chave Male
+      'homem',        // Palavra-chave Homem
+      'masculin',     // Palavra-chave Masculino
+    ];
+
+    // Nomes femininos expressamente evitados
+    const femaleKeywords = [
+      'maria',
+      'luciana',
+      'fernanda',
+      'francisca',
+      'helena',
+      'yara',
+      'leticia',
+      'thalita',
+      'vitoria',
+      'female',
+      'mulher',
+      'feminina',
+      'woman',
+      'zira',
+      'pt-br-x-afs',
+      'pt-br-x-yda',
+      'pt-br-x-afc',
+    ];
+
+    // 1ª Tentativa: Encontrar voz masculina por palavra-chave conhecida
+    for (const kw of maleKeywords) {
+      const match = pool.find((v) => {
+        const full = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        const isFem = femaleKeywords.some((fk) => full.includes(fk));
+        return full.includes(kw) && !isFem;
+      });
+      if (match) return match;
+    }
+
+    // 2ª Tentativa: Qualquer voz em português que não contenha palavras femininas
+    const nonFemalePt = ptVoices.find((v) => {
+      const full = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+      return !femaleKeywords.some((fk) => full.includes(fk));
+    });
+    if (nonFemalePt) return nonFemalePt;
+
+    // 3ª Tentativa: Primeira voz brasileira
+    const ptBr = ptVoices.find((v) => (v.lang || '').toLowerCase().includes('br'));
+    if (ptBr) return ptBr;
+
+    return ptVoices[0] || voiceList[0] || null;
+  };
+
+  // Inicia fala com voz masculina grave em todos os dispositivos
   const speakText = (text: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
@@ -72,16 +172,18 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'pt-BR';
-      utterance.rate = 1.0;
-      utterance.pitch = 1.05;
+      
+      // PARÂMETROS DE VOZ MASCULINA GRAVE (Mobile Android/iOS e Computador)
+      // pitch = 0.72 reduz a frequência fundamental criando o tom barítono/grave viril
+      utterance.pitch = 0.72;
+      // rate = 0.94 confere autoridade militar firme, cadenciada e pausada
+      utterance.rate = 0.94;
+      utterance.volume = 1.0;
 
-      // Try finding a natural pt-BR voice
-      const voices = window.speechSynthesis.getVoices();
-      const ptVoice = voices.find(
-        (v) => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt')
-      );
-      if (ptVoice) {
-        utterance.voice = ptVoice;
+      const currentVoices = window.speechSynthesis.getVoices();
+      const voiceToUse = findDeepMasculineVoice(currentVoices.length > 0 ? currentVoices : availableVoices);
+      if (voiceToUse) {
+        utterance.voice = voiceToUse;
       }
 
       utterance.onstart = () => setIsSpeaking(true);
@@ -195,13 +297,17 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               Instrutor Osaias • CMT XVII
             </span>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Voz Masculina Grave
+            </span>
           </div>
 
           <div className="flex items-center space-x-2">
             {/* Botão de voz / mudo */}
             <button
               onClick={toggleMute}
-              title={isMuted ? 'Ativar voz de Osaias' : 'Silenciar voz'}
+              title={isMuted ? 'Ativar voz masculina grave de Osaias' : 'Silenciar voz'}
               className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
             >
               {isMuted ? (
@@ -214,8 +320,8 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             {/* Repetir fala */}
             <button
               onClick={handleReplay}
-              title="Ouvir novamente"
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              title="Ouvir novamente com voz masculina grave"
+              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -235,7 +341,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         <div className="w-full bg-slate-800 h-1 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-1000 ease-linear"
-            style={{ width: `${(secondsLeft / 10) * 100}%` }}
+            style={{ width: `${(secondsLeft / 14) * 100}%` }}
           />
         </div>
 
@@ -243,7 +349,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         <div className="p-6 text-center flex flex-col items-center">
           
           {/* Avatar com moldura militar dourada e pulso */}
-          <div className="relative mb-5 group">
+          <div className="relative mb-3 group cursor-pointer" onClick={handleReplay} title="Clique para ouvir o Instrutor Osaias">
             {/* Halo de luz militar */}
             <div className="absolute -inset-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 rounded-full blur-md opacity-60 group-hover:opacity-100 animate-pulse transition duration-1000"></div>
             
@@ -257,11 +363,21 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </div>
 
             {/* Selo do Batalhão / Estrela */}
-            <div className="absolute -bottom-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[11px] px-3 py-0.5 rounded-full shadow-lg border border-yellow-200 flex items-center gap-1">
+            <div className="absolute -bottom-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[11px] px-3 py-0.5 rounded-full shadow-lg border border-yellow-200 flex items-center gap-1 left-1/2 -translate-x-1/2">
               <Star className="w-3 h-3 fill-slate-950" />
               OSAIAS
             </div>
           </div>
+
+          {/* Botão de acionamento de áudio para dispositivos móveis e desktop */}
+          <button
+            onClick={handleReplay}
+            className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+            title="Clique para reproduzir o áudio com a voz masculina grave"
+          >
+            <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-amber-400 animate-pulse' : 'text-slate-300'}`} />
+            <span>{isSpeaking ? 'Instrutor Osaias Falando...' : '🔊 Ouvir Voz do Instrutor Osaias'}</span>
+          </button>
 
           {/* Nome e Patente */}
           <h3 className="text-xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2">
