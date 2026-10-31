@@ -201,6 +201,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* BANNER OFICIAL: INFORMAR ALUNOS SOBRE MAIS 30 QUESTÕES ADICIONADAS */}
+      <div className="bg-gradient-to-r from-amber-500/15 via-blue-950/40 to-slate-900 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-lg shadow-amber-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="p-3 bg-gradient-to-br from-amber-500 to-yellow-500 text-slate-950 rounded-xl shadow-md shrink-0">
+            <Sparkles className="w-6 h-6 text-slate-950" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 rounded-md">
+                📢 Novidade no Sistema
+              </span>
+              <span className="text-xs text-amber-300 font-semibold">
+                Edital Nº 001/26 • CMT XVII
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-extrabold text-white">
+              +30 Novas Questões Oficiais Adicionadas aos Simulados do CMT!
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Disponibilizamos 30 questões inéditas comentadas (15 de Língua Portuguesa e 15 de Matemática) para você treinar com o tempo real de prova. Se você errar, o sistema explica o motivo exato para você aprender e garantir sua vaga!
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigateTab('simulados')}
+          className="w-full md:w-auto shrink-0 px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 transition-all hover:scale-102 cursor-pointer"
+        >
+          <span>Resolver Simulados Agora</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Daily Goal & Progress Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Meta Diária */}

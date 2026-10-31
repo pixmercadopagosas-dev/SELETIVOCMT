@@ -865,6 +865,27 @@ class DatabaseEngine {
     this.friendships = safeStorageGet<Friendship[]>(STORAGE_KEYS.FRIENDSHIPS, []);
     this.messages = safeStorageGet<ChatMessage[]>(STORAGE_KEYS.MESSAGES, []);
     this.notifications = safeStorageGet<AppNotification[]>(STORAGE_KEYS.NOTIFICATIONS, []);
+
+    // Garante notificação oficial avisando os alunos sobre as 30 novas questões adicionadas
+    for (const prof of this.profiles) {
+      if (prof.role === 'estudante') {
+        const hasNotif = this.notifications.some(
+          (n) => n.user_id === prof.id && n.id.includes('novas-questoes-cmt-30')
+        );
+        if (!hasNotif) {
+          this.notifications.unshift({
+            id: `notif-novas-questoes-cmt-30-${prof.id}`,
+            user_id: prof.id,
+            title: '📢 Novas 30 Questões nos Simulados do CMT!',
+            message: 'O sistema foi atualizado com mais 30 questões comentadas de Português e Matemática fiéis ao Edital Nº 001/26! Se errar qualquer alternativa, você verá a explicação detalhada do erro para fixar o aprendizado.',
+            type: 'aviso',
+            is_read: false,
+            action_link: 'simulados',
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
     this.auditLogs = safeStorageGet<AuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, [
       {
         id: 'aud-init',

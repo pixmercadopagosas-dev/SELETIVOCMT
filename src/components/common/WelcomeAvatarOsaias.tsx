@@ -16,16 +16,18 @@ interface WelcomeAvatarOsaiasProps {
   currentUser: UserProfile | null;
   isOpen: boolean;
   onClose: () => void;
+  onGoToSimulados?: () => void;
 }
 
 export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   currentUser,
   isOpen,
   onClose,
+  onGoToSimulados,
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(9);
+  const [secondsLeft, setSecondsLeft] = useState(14);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -35,6 +37,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   // O texto exato exigido pelo usuário:
   // "ANTES DE DAR BOAS VINDAS, ELE DIRÁ: MEU NOME É OSAIAS, SEU ASSISTENTE VIRTUAL."
   // Dando boas-vindas, desejando bons estudos e dizendo para acreditarem no seu potencial.
+  // E informando aos alunos que o sistema possui mais questões para serem resolvidas.
   const speechScript = [
     {
       badge: 'Apresentação',
@@ -51,9 +54,14 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
       text: `Desejo a você excelentes estudos hoje. Acredite no seu potencial! Com foco, dedicação e disciplina, a sua aprovação e a sua vaga estão cada dia mais perto.`,
       highlight: false,
     },
+    {
+      badge: 'Novas Questões no Sistema',
+      text: `Atenção: acabamos de adicionar mais 30 questões comentadas de Português e Matemática nos Simulados do CMT! Se errar, explicamos exatamente o porquê para você aprender.`,
+      highlight: true,
+    },
   ];
 
-  const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos. Acredite sempre no seu potencial! Com dedicação e disciplina, a sua aprovação no Colégio Militar Tiradentes está cada dia mais perto!`;
+  const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos. Acredite sempre no seu potencial! Atenção: temos mais 30 novas questões comentadas de Português e Matemática disponíveis nos Simulados do CMT com explicação detalhada para cada erro. Bons estudos rumo à aprovação!`;
 
   // Start speech synthesis
   const speakText = (text: string) => {
@@ -97,7 +105,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   // Quando o modal abre
   useEffect(() => {
     if (isOpen) {
-      setSecondsLeft(10);
+      setSecondsLeft(14);
       setCurrentStep(0);
 
       // Inicia a fala se não estiver silenciado
@@ -106,8 +114,9 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
       }, 400);
 
       // Passa as mensagens gradualmente
-      const step1 = setTimeout(() => setCurrentStep(1), 2600);
-      const step2 = setTimeout(() => setCurrentStep(2), 5200);
+      const step1 = setTimeout(() => setCurrentStep(1), 2200);
+      const step2 = setTimeout(() => setCurrentStep(2), 4600);
+      const step3 = setTimeout(() => setCurrentStep(3), 7200);
 
       // Countdown para auto-fechar
       timerRef.current = setInterval(() => {
@@ -124,6 +133,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         clearTimeout(speechTimeout);
         clearTimeout(step1);
         clearTimeout(step2);
+        clearTimeout(step3);
         if (timerRef.current) clearInterval(timerRef.current);
         stopSpeaking();
       };
@@ -138,6 +148,16 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
     onClose();
   };
 
+  const handleGoToSimulados = () => {
+    stopSpeaking();
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (onGoToSimulados) {
+      onGoToSimulados();
+    } else {
+      onClose();
+    }
+  };
+
   const toggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
@@ -149,10 +169,11 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   };
 
   const handleReplay = () => {
-    setSecondsLeft(10);
+    setSecondsLeft(14);
     setCurrentStep(0);
-    setTimeout(() => setCurrentStep(1), 2600);
-    setTimeout(() => setCurrentStep(2), 5200);
+    setTimeout(() => setCurrentStep(1), 2200);
+    setTimeout(() => setCurrentStep(2), 4600);
+    setTimeout(() => setCurrentStep(3), 7200);
     speakText(fullSpokenText);
   };
 
@@ -289,24 +310,53 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Etapa 4: Informação sobre novas questões no sistema */}
+            <div className={`transition-opacity duration-500 ${currentStep >= 3 ? 'opacity-100' : 'opacity-40'}`}>
+              <div className="mt-3 p-3 bg-gradient-to-r from-amber-500/20 via-blue-900/30 to-amber-500/10 rounded-xl border-2 border-amber-400/60 flex items-start gap-2.5 shadow-md">
+                <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 block mb-0.5">
+                    📢 Novidade Oficial no Sistema
+                  </span>
+                  <p className="text-xs sm:text-sm text-white leading-snug font-semibold">
+                    Adicionamos <strong className="text-yellow-300 underline font-black">+30 novas questões comentadas</strong> nos <strong className="text-blue-300">Simulados do CMT</strong> (Português e Matemática)!
+                  </p>
+                  <p className="text-[11px] text-slate-300 mt-1">
+                    Se errar alguma opção, o sistema explica o motivo exato do erro para você aprender com excelência.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Rodapé interativo com botão de avançar e contagem regressiva */}
+          {/* Rodapé interativo com botões de ação e contagem regressiva */}
           <div className="mt-5 w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-            <span className="text-xs text-slate-400 flex items-center gap-1.5">
-              <span>Fechando automaticamente em:</span>
+            <span className="text-xs text-slate-400 flex items-center gap-1.5 order-2 sm:order-1">
+              <span>Fechando em:</span>
               <strong className="text-amber-400 font-mono text-sm px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
                 {secondsLeft}s
               </strong>
             </span>
 
-            <button
-              onClick={handleDismiss}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transform active:scale-95 transition-all text-sm cursor-pointer"
-            >
-              <span>Vamos aos Estudos!</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+              <button
+                onClick={handleGoToSimulados}
+                className="flex-1 sm:flex-initial px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/25 flex items-center justify-center gap-1.5 transform active:scale-95 transition-all text-xs sm:text-sm cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-slate-950" />
+                <span>Ver Novos Simulados (30Q)</span>
+              </button>
+
+              <button
+                onClick={handleDismiss}
+                className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors text-xs sm:text-sm cursor-pointer"
+                title="Fechar e ir ao painel"
+              >
+                <span>Avançar</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
         </div>

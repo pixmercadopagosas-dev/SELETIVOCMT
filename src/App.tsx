@@ -743,6 +743,10 @@ function MainApp() {
         currentUser={currentUser}
         isOpen={osaiasWelcomeOpen}
         onClose={() => setOsaiasWelcomeOpen(false)}
+        onGoToSimulados={() => {
+          setOsaiasWelcomeOpen(false);
+          setCurrentTab('simulados');
+        }}
       />
     </div>
   );

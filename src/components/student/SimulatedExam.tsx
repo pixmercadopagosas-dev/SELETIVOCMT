@@ -14,6 +14,13 @@ import {
   ArrowLeft,
   RotateCcw,
   ShieldAlert,
+  XCircle,
+  Check,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Eye,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { db } from '../../lib/databaseEngine';
@@ -35,28 +42,44 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   const mathCount = is6Ano ? 15 : 20;
   const minRequiredPerSubject = is6Ano ? 5 : 6; // 30% regra do edital Art. 25
 
-  // Generate question list repeating/cycling official curriculum questions to form the exact 30 or 40 questions of the official exam
-  const [examQuestions] = useState<Question[]>(() => {
+  // Seleção de Edição do Simulado: 'novas_questoes' (+30 novas questões do edital) ou 'bateria_1'
+  const [selectedEdition, setSelectedEdition] = useState<'novas_questoes' | 'bateria_1'>('novas_questoes');
+
+  const getQuestionsForEdition = (edition: 'novas_questoes' | 'bateria_1'): Question[] => {
     const portQuestions = OFFICIAL_QUESTIONS.filter(
-      (q) => q.grade_id === currentUser.grade && q.subject_id === 'portugues'
+      (q) => (q.grade_id === currentUser.grade || q.grade_id === '6_ano') && q.subject_id === 'portugues'
     );
     const mathQuestions = OFFICIAL_QUESTIONS.filter(
-      (q) => q.grade_id === currentUser.grade && q.subject_id === 'matematica'
+      (q) => (q.grade_id === currentUser.grade || q.grade_id === '6_ano') && q.subject_id === 'matematica'
     );
 
     const list: Question[] = [];
-    // Portuguese part
-    for (let i = 0; i < portugueseCount; i++) {
-      const q = portQuestions[i % portQuestions.length];
-      list.push({ ...q, id: `exam-port-${i + 1}` });
-    }
-    // Math part
-    for (let i = 0; i < mathCount; i++) {
-      const q = mathQuestions[i % mathQuestions.length];
-      list.push({ ...q, id: `exam-mat-${i + 1}` });
+    if (edition === 'novas_questoes') {
+      // 15 mais recentes de português (as 15 novas questões adicionadas)
+      const portSlice = portQuestions.slice(Math.max(0, portQuestions.length - portugueseCount));
+      // 15 mais recentes de matemática (as 15 novas questões adicionadas)
+      const mathSlice = mathQuestions.slice(Math.max(0, mathQuestions.length - mathCount));
+      list.push(...portSlice);
+      list.push(...mathSlice);
+    } else {
+      list.push(...portQuestions.slice(0, portugueseCount));
+      list.push(...mathQuestions.slice(0, mathCount));
     }
     return list;
-  });
+  };
+
+  const [examQuestions, setExamQuestions] = useState<Question[]>(() => getQuestionsForEdition('novas_questoes'));
+
+  const handleChangeEdition = (edition: 'novas_questoes' | 'bateria_1') => {
+    setSelectedEdition(edition);
+    setExamQuestions(getQuestionsForEdition(edition));
+    setCurrentIndex(0);
+    setSelectedAnswers({});
+    setFlaggedForReview({});
+    setSecondsRemaining(4 * 3600);
+    setIsFinished(false);
+    setResultAttempt(null);
+  };
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D' | 'E'>>({});
@@ -65,6 +88,10 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   const [isFinished, setIsFinished] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [resultAttempt, setResultAttempt] = useState<QuizAttempt | null>(null);
+
+  // Estados da revisão comentada e explicações pedagógicas
+  const [reviewFilter, setReviewFilter] = useState<'todos' | 'erros' | 'acertos'>('todos');
+  const [expandedSolutions, setExpandedSolutions] = useState<Record<number, boolean>>({});
 
   // Timer countdown
   useEffect(() => {
@@ -247,6 +274,223 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
             </div>
           </div>
 
+          {/* ============================================================== */}
+          {/* GABARITO COMENTADO & CORREÇÃO PEDAGÓGICA QUESTÃO POR QUESTÃO  */}
+          {/* ============================================================== */}
+          <div className="space-y-6 pt-4 border-t border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  Gabarito Comentado & Correção Pedagógica
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Veja a explicação detalhada de cada questão. Se errou, entenda o motivo do erro para aprender e fixar o conteúdo do Edital!
+                </p>
+              </div>
+
+              {/* Filtro: Todas / Erros / Acertos */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start sm:self-auto text-xs">
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('todos')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                    reviewFilter === 'todos'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Todas ({totalQuestions})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('erros')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    reviewFilter === 'erros'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'text-red-700 hover:bg-red-50'
+                  }`}
+                >
+                  <span>Erros</span>
+                  <span className="px-1.5 py-0.2 bg-red-100 text-red-900 rounded-full text-[10px]">
+                    {totalQuestions - resultAttempt.total_score}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('acertos')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    reviewFilter === 'acertos'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-emerald-700 hover:bg-emerald-50'
+                  }`}
+                >
+                  <span>Acertos</span>
+                  <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-900 rounded-full text-[10px]">
+                    {resultAttempt.total_score}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Lista das questões com gabarito e explicação */}
+            <div className="space-y-4">
+              {examQuestions.map((q, idx) => {
+                const userSelected = selectedAnswers[idx];
+                const isCorrect = userSelected === q.correct_option;
+                const isSkipped = !userSelected;
+
+                if (reviewFilter === 'erros' && isCorrect) return null;
+                if (reviewFilter === 'acertos' && (!isCorrect || isSkipped)) return null;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl border p-5 sm:p-6 transition-all ${
+                      isCorrect
+                        ? 'bg-white border-emerald-300 shadow-xs'
+                        : isSkipped
+                        ? 'bg-amber-50/50 border-amber-300'
+                        : 'bg-white border-red-300 shadow-xs'
+                    }`}
+                  >
+                    {/* Header da questão */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 text-xs font-bold">
+                        <span className="px-2.5 py-1 rounded-md bg-slate-900 text-white text-[11px]">
+                          Questão {idx + 1}
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        {idx < portugueseCount ? (
+                          <span className="text-blue-900 flex items-center gap-1">
+                            <BookOpen className="w-3.5 h-3.5" /> Língua Portuguesa
+                          </span>
+                        ) : (
+                          <span className="text-red-900 flex items-center gap-1">
+                            <Calculator className="w-3.5 h-3.5" /> Matemática
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isCorrect ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 rounded-full text-xs font-black border border-emerald-300">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            Você Acertou!
+                          </span>
+                        ) : isSkipped ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-300">
+                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            Em Branco
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-900 rounded-full text-xs font-black border border-red-300">
+                            <XCircle className="w-4 h-4 text-red-600" />
+                            Você Errou
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Enunciado */}
+                    <p className="text-sm sm:text-base font-bold text-slate-900 mb-4 leading-relaxed">
+                      {q.statement}
+                    </p>
+
+                    {/* Alternativas */}
+                    <div className="space-y-2 mb-4">
+                      {q.options.map((opt) => {
+                        const isCorrectOpt = opt.letter === q.correct_option;
+                        const isChosen = userSelected === opt.letter;
+
+                        let optBg = 'bg-slate-50/70 border-slate-200 text-slate-700';
+                        if (isCorrectOpt) {
+                          optBg = 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-1 ring-emerald-400 font-semibold';
+                        } else if (isChosen && !isCorrectOpt) {
+                          optBg = 'bg-red-50 border-red-400 text-red-950 ring-1 ring-red-400 font-semibold';
+                        }
+
+                        return (
+                          <div
+                            key={opt.letter}
+                            className={`p-3 rounded-xl border flex items-start gap-3 text-xs sm:text-sm ${optBg}`}
+                          >
+                            <span
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 font-black text-xs ${
+                                isCorrectOpt
+                                  ? 'bg-emerald-600 text-white'
+                                  : isChosen
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {opt.letter}
+                            </span>
+                            <span className="flex-1 pt-0.5">{opt.text}</span>
+                            {isCorrectOpt && (
+                              <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                                Gabarito Oficial
+                              </span>
+                            )}
+                            {isChosen && !isCorrectOpt && (
+                              <span className="text-[11px] font-black text-red-700 bg-red-100 px-2 py-0.5 rounded-full shrink-0">
+                                Sua Resposta
+                              </span>
+                            )}
+                            {isChosen && isCorrectOpt && (
+                              <span className="text-[11px] font-black text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                                Sua Resposta Correta
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Explicação Pedagógica para o aluno aprender */}
+                    <div className="space-y-3 pt-2">
+                      {!isCorrect && userSelected && q.why_incorrect_notes && q.why_incorrect_notes[userSelected] && (
+                        <div className="p-3.5 bg-red-50 rounded-xl border border-red-200 text-xs text-red-950 space-y-1">
+                          <p className="font-bold flex items-center gap-1.5 text-red-900">
+                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                            <span>Por que a alternativa {userSelected} que você marcou está incorreta:</span>
+                          </p>
+                          <p className="leading-relaxed pl-5 text-red-800">
+                            {q.why_incorrect_notes[userSelected]}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Por que o gabarito é o correto */}
+                      <div className="p-3.5 bg-blue-50/80 rounded-xl border border-blue-200 text-xs text-blue-950 space-y-1.5">
+                        <p className="font-bold flex items-center gap-1.5 text-blue-900">
+                          <Lightbulb className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>Explicação da resposta correta (Alternativa {q.correct_option}):</span>
+                        </p>
+                        <p className="leading-relaxed pl-5 text-slate-800">
+                          {q.why_correct || q.detailed_explanation}
+                        </p>
+                      </div>
+
+                      {/* Resolução Passo a Passo */}
+                      {q.step_by_step_solution && (
+                        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
+                          <p className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                            <Check className="w-4 h-4 text-blue-700" />
+                            <span>Resolução Passo a Passo:</span>
+                          </p>
+                          <p className="leading-relaxed pl-5 text-slate-600 font-mono text-[11px]">
+                            {q.step_by_step_solution}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Legal Institutional Disclaimer Required by Prompt */}
           <div className="p-4 bg-slate-100 rounded-2xl text-[11px] text-slate-500 border border-slate-200">
             <strong>Aviso Institucional Obrigatório:</strong> Esta simulação é uma ferramenta pedagógica de apoio aos
@@ -291,9 +535,39 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
           <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
             SIMULADO OFICIAL • EDITAL Nº 001/26 CMT XVII
           </span>
-          <h2 className="text-base font-extrabold text-white">
-            {is6Ano ? 'Simulado 6º Ano (30 Questões)' : 'Simulado 7º Ano (40 Questões)'}
+          <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+            <span>{is6Ano ? 'Simulado 6º Ano (30 Questões)' : 'Simulado 7º Ano (40 Questões)'}</span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-400/30">
+              {selectedEdition === 'novas_questoes' ? '+30 Novas Questões' : 'Bateria 1'}
+            </span>
           </h2>
+        </div>
+
+        {/* Seletor de Edição: Novas 30 Questões vs Bateria 1 */}
+        <div className="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700 text-xs">
+          <button
+            type="button"
+            onClick={() => handleChangeEdition('novas_questoes')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              selectedEdition === 'novas_questoes'
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black shadow-xs'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Simulado 2 (+30 Novas)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleChangeEdition('bateria_1')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+              selectedEdition === 'bateria_1'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>Simulado 1</span>
+          </button>
         </div>
 
         {/* Timer display */}
@@ -305,11 +579,26 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
         {/* Finish button */}
         <button
           onClick={() => setShowConfirmModal(true)}
-          className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102"
+          className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
         >
           Entregar Simulado
         </button>
       </div>
+
+      {/* Banner Informativo do Edital e Correção Pedagógica */}
+      {selectedEdition === 'novas_questoes' && (
+        <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-amber-900 bg-white">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              <strong>Novas 30 Questões Ativas:</strong> Questões 1 a 15 de Língua Portuguesa e 16 a 30 de Matemática. Ao entregar o simulado, veja a explicação detalhada de cada erro para aprender!
+            </span>
+          </div>
+          <span className="shrink-0 text-[11px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+            Gabarito Comentado
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column: Questions Grid & Stats */}
