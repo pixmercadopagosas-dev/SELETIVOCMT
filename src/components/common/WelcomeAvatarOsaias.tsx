@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Star,
   ChevronRight,
+  Play,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 
@@ -27,200 +28,104 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(14);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(40);
   const [currentStep, setCurrentStep] = useState<number>(0);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const studentName = currentUser?.full_name?.split(' ')[0] || currentUser?.username || 'Estudante';
 
-  // O texto exato exigido pelo usuário:
-  // "ANTES DE DAR BOAS VINDAS, ELE DIRÁ: MEU NOME É OSAIAS, SEU ASSISTENTE VIRTUAL."
-  // Dando boas-vindas, desejando bons estudos e dizendo para acreditarem no seu potencial.
-  // E informando aos alunos que o sistema possui mais questões para serem resolvidas.
-  const speechScript = [
-    {
-      badge: 'Apresentação',
-      text: `Meu nome é Osaias, seu assistente virtual.`,
-      highlight: true,
-    },
-    {
-      badge: 'Boas-Vindas',
-      text: `Olá, ${studentName}! Seja muito bem-vindo(a) à plataforma de preparação do Colégio Militar Tiradentes XVII!`,
-      highlight: false,
-    },
-    {
-      badge: 'Motivação & Potencial',
-      text: `Desejo a você excelentes estudos hoje. Acredite no seu potencial! Com foco, dedicação e disciplina, a sua aprovação e a sua vaga estão cada dia mais perto.`,
-      highlight: false,
-    },
-    {
-      badge: 'Simulado de 60 Questões',
-      text: `Atenção: o Simulado do CMT agora possui 60 questões completas (30 de Português e 30 de Matemática)! Se errar, explicamos exatamente o porquê para você aprender.`,
-      highlight: true,
-    },
-  ];
-
-  const fullSpokenText = `Meu nome é Osaias, seu assistente virtual. Olá, ${studentName}! Seja muito bem-vindo à nossa plataforma. Desejo a você excelentes estudos e acredite sempre no seu potencial! Atenção: o simulado do Colégio Militar agora possui sessenta questões comentadas com trinta de Português e trinta de Matemática, com explicação detalhada para cada erro. Bons estudos rumo à aprovação!`;
-
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-
-  // Carrega e atualiza vozes em tempo real (essencial para dispositivos móveis Android e iOS)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-
-    const loadVoices = () => {
+  // Parar qualquer áudio ativo
+  const stopAudio = () => {
+    if (audioRef.current) {
       try {
-        const vList = window.speechSynthesis.getVoices();
-        if (vList && vList.length > 0) {
-          setAvailableVoices(vList);
-        }
-      } catch (err) {
-        console.warn('Erro ao listar vozes:', err);
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch (e) {
+        console.warn('Erro ao pausar áudio:', e);
       }
-    };
-
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
-
-  // Seleciona com rigor a melhor voz masculina em português do dispositivo
-  const findDeepMasculineVoice = (voiceList: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
-    if (!voiceList || voiceList.length === 0) return null;
-
-    const ptVoices = voiceList.filter((v) => {
-      const l = (v.lang || '').toLowerCase();
-      return l.startsWith('pt') || l.includes('por') || l.includes('brazil');
-    });
-
-    const pool = ptVoices.length > 0 ? ptVoices : voiceList;
-
-    // Palavras-chave masculinas reconhecidas em Android, Windows, iOS, Mac e Linux
-    const maleKeywords = [
-      'daniel',       // Microsoft Daniel (Windows pt-BR masculino)
-      'felipe',       // Apple Felipe (iOS / macOS pt-BR masculino)
-      'antonio',      // Microsoft Antonio (Windows pt-BR masculino)
-      'jorge',        // Android / Apple Jorge
-      'ricardo',      // Ricardo masculino
-      'arthur',       // Apple Arthur
-      'pt-br-x-jab',  // Google TTS Android Masculino 1
-      'pt-br-x-yab',  // Google TTS Android Masculino 2
-      'pt-br-x-afb',  // Google TTS Android Masculino 3
-      'pt-br-x-jbb',  // Google TTS Android Masculino 4
-      'male',         // Palavra-chave Male
-      'homem',        // Palavra-chave Homem
-      'masculin',     // Palavra-chave Masculino
-    ];
-
-    // Nomes femininos expressamente evitados
-    const femaleKeywords = [
-      'maria',
-      'luciana',
-      'fernanda',
-      'francisca',
-      'helena',
-      'yara',
-      'leticia',
-      'thalita',
-      'vitoria',
-      'female',
-      'mulher',
-      'feminina',
-      'woman',
-      'zira',
-      'pt-br-x-afs',
-      'pt-br-x-yda',
-      'pt-br-x-afc',
-    ];
-
-    // 1ª Tentativa: Encontrar voz masculina por palavra-chave conhecida
-    for (const kw of maleKeywords) {
-      const match = pool.find((v) => {
-        const full = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-        const isFem = femaleKeywords.some((fk) => full.includes(fk));
-        return full.includes(kw) && !isFem;
-      });
-      if (match) return match;
-    }
-
-    // 2ª Tentativa: Qualquer voz em português que não contenha palavras femininas
-    const nonFemalePt = ptVoices.find((v) => {
-      const full = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-      return !femaleKeywords.some((fk) => full.includes(fk));
-    });
-    if (nonFemalePt) return nonFemalePt;
-
-    // 3ª Tentativa: Primeira voz brasileira
-    const ptBr = ptVoices.find((v) => (v.lang || '').toLowerCase().includes('br'));
-    if (ptBr) return ptBr;
-
-    return ptVoices[0] || voiceList[0] || null;
-  };
-
-  // Inicia fala com voz masculina grave em todos os dispositivos
-  const speakText = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      if (isMuted) return;
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'pt-BR';
-      
-      // PARÂMETROS DE VOZ MASCULINA GRAVE (Mobile Android/iOS e Computador)
-      // pitch = 0.72 reduz a frequência fundamental criando o tom barítono/grave viril
-      utterance.pitch = 0.72;
-      // rate = 0.94 confere autoridade militar firme, cadenciada e pausada
-      utterance.rate = 0.94;
-      utterance.volume = 1.0;
-
-      const currentVoices = window.speechSynthesis.getVoices();
-      const voiceToUse = findDeepMasculineVoice(currentVoices.length > 0 ? currentVoices : availableVoices);
-      if (voiceToUse) {
-        utterance.voice = voiceToUse;
-      }
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      speechRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn('SpeechSynthesis error:', e);
-    }
-  };
-
-  const stopSpeaking = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
   };
 
-  // Quando o modal abre
+  // Reproduzir áudio com voz masculina grave
+  const playAudio = async () => {
+    try {
+      if (!audioRef.current) {
+        const audio = new Audio('/audio/osaias-welcome.wav');
+        audio.preload = 'auto';
+
+        audio.onplay = () => {
+          setIsSpeaking(true);
+          setAutoplayBlocked(false);
+        };
+
+        audio.onpause = () => {
+          setIsSpeaking(false);
+        };
+
+        audio.onended = () => {
+          setIsSpeaking(false);
+        };
+
+        // Sincroniza os passos da fala em tempo real com o áudio
+        audio.ontimeupdate = () => {
+          const t = audio.currentTime;
+          if (t < 4.2) {
+            setCurrentStep(0);
+          } else if (t < 10.8) {
+            setCurrentStep(1);
+          } else if (t < 21.0) {
+            setCurrentStep(2);
+          } else {
+            setCurrentStep(3);
+          }
+        };
+
+        // Fallback para rota de API se o estático falhar
+        audio.onerror = async () => {
+          console.warn('Tentando rota alternativa de áudio /api/tts/osaias-audio.wav');
+          try {
+            audio.src = '/api/tts/osaias-audio.wav';
+            await audio.play();
+          } catch (err) {
+            console.warn('Erro ao reproduzir via API alternativa:', err);
+          }
+        };
+
+        audioRef.current = audio;
+      }
+
+      audioRef.current.muted = isMuted;
+      audioRef.current.volume = isMuted ? 0 : 1;
+
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        setAutoplayBlocked(false);
+      }
+    } catch (err: any) {
+      console.log('Autoplay bloqueado pelo navegador do dispositivo (requer toque do usuário):', err);
+      setAutoplayBlocked(true);
+      setIsSpeaking(false);
+    }
+  };
+
+  // Ciclo de vida ao abrir/fechar o modal
   useEffect(() => {
     if (isOpen) {
-      setSecondsLeft(14);
+      setSecondsLeft(40);
       setCurrentStep(0);
+      setAutoplayBlocked(false);
 
-      // Inicia a fala se não estiver silenciado
-      const speechTimeout = setTimeout(() => {
-        speakText(fullSpokenText);
-      }, 400);
+      // Inicia áudio com a voz masculina grave (Fenrir)
+      const startTimer = setTimeout(() => {
+        playAudio();
+      }, 350);
 
-      // Passa as mensagens gradualmente
-      const step1 = setTimeout(() => setCurrentStep(1), 2200);
-      const step2 = setTimeout(() => setCurrentStep(2), 4600);
-      const step3 = setTimeout(() => setCurrentStep(3), 7200);
-
-      // Countdown para auto-fechar
+      // Timer regressivo para auto-fechamento
       timerRef.current = setInterval(() => {
         setSecondsLeft((prev) => {
           if (prev <= 1) {
@@ -232,26 +137,23 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
       }, 1000);
 
       return () => {
-        clearTimeout(speechTimeout);
-        clearTimeout(step1);
-        clearTimeout(step2);
-        clearTimeout(step3);
+        clearTimeout(startTimer);
         if (timerRef.current) clearInterval(timerRef.current);
-        stopSpeaking();
+        stopAudio();
       };
     } else {
-      stopSpeaking();
+      stopAudio();
     }
   }, [isOpen]);
 
   const handleDismiss = () => {
-    stopSpeaking();
+    stopAudio();
     if (timerRef.current) clearInterval(timerRef.current);
     onClose();
   };
 
   const handleGoToSimulados = () => {
-    stopSpeaking();
+    stopAudio();
     if (timerRef.current) clearInterval(timerRef.current);
     if (onGoToSimulados) {
       onGoToSimulados();
@@ -261,22 +163,33 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   };
 
   const toggleMute = () => {
-    if (isMuted) {
-      setIsMuted(false);
-      speakText(fullSpokenText);
+    if (audioRef.current) {
+      if (isMuted) {
+        setIsMuted(false);
+        audioRef.current.muted = false;
+        audioRef.current.volume = 1;
+        if (audioRef.current.paused) {
+          playAudio();
+        }
+      } else {
+        setIsMuted(true);
+        audioRef.current.muted = true;
+        audioRef.current.volume = 0;
+      }
     } else {
-      setIsMuted(true);
-      stopSpeaking();
+      setIsMuted(!isMuted);
     }
   };
 
   const handleReplay = () => {
-    setSecondsLeft(14);
+    setSecondsLeft(40);
     setCurrentStep(0);
-    setTimeout(() => setCurrentStep(1), 2200);
-    setTimeout(() => setCurrentStep(2), 4600);
-    setTimeout(() => setCurrentStep(3), 7200);
-    speakText(fullSpokenText);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      playAudio();
+    } else {
+      playAudio();
+    }
   };
 
   if (!isOpen) return null;
@@ -299,7 +212,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Voz Masculina Grave
+              Voz Masculina Grave (Fenrir)
             </span>
           </div>
 
@@ -308,7 +221,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             <button
               onClick={toggleMute}
               title={isMuted ? 'Ativar voz masculina grave de Osaias' : 'Silenciar voz'}
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
             >
               {isMuted ? (
                 <VolumeX className="w-4 h-4 text-rose-400" />
@@ -320,7 +233,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             {/* Repetir fala */}
             <button
               onClick={handleReplay}
-              title="Ouvir novamente com voz masculina grave"
+              title="Ouvir novamente com a voz masculina grave"
               className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
@@ -329,7 +242,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             {/* Fechar imediatamente */}
             <button
               onClick={handleDismiss}
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors"
+              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
               title="Fechar boas-vindas"
             >
               <X className="w-4 h-4" />
@@ -341,7 +254,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         <div className="w-full bg-slate-800 h-1 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-1000 ease-linear"
-            style={{ width: `${(secondsLeft / 14) * 100}%` }}
+            style={{ width: `${(secondsLeft / 40) * 100}%` }}
           />
         </div>
 
@@ -349,7 +262,11 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         <div className="p-6 text-center flex flex-col items-center">
           
           {/* Avatar com moldura militar dourada e pulso */}
-          <div className="relative mb-3 group cursor-pointer" onClick={handleReplay} title="Clique para ouvir o Instrutor Osaias">
+          <div
+            className="relative mb-3 group cursor-pointer"
+            onClick={handleReplay}
+            title="Clique para ouvir a voz masculina do Instrutor Osaias"
+          >
             {/* Halo de luz militar */}
             <div className="absolute -inset-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 rounded-full blur-md opacity-60 group-hover:opacity-100 animate-pulse transition duration-1000"></div>
             
@@ -370,14 +287,25 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
           </div>
 
           {/* Botão de acionamento de áudio para dispositivos móveis e desktop */}
-          <button
-            onClick={handleReplay}
-            className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Clique para reproduzir o áudio com a voz masculina grave"
-          >
-            <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-amber-400 animate-pulse' : 'text-slate-300'}`} />
-            <span>{isSpeaking ? 'Instrutor Osaias Falando...' : '🔊 Ouvir Voz do Instrutor Osaias'}</span>
-          </button>
+          {autoplayBlocked ? (
+            <button
+              onClick={handleReplay}
+              className="mb-3 inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-full text-xs font-black transition-all cursor-pointer shadow-lg shadow-amber-500/30 animate-pulse active:scale-95"
+              title="Toque para ouvir a voz masculina grave"
+            >
+              <Play className="w-4 h-4 fill-slate-950" />
+              <span>🔊 Toque para Ouvir a Voz Masculina Grave</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleReplay}
+              className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Clique para reproduzir o áudio com a voz masculina grave"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-amber-400 animate-pulse' : 'text-slate-300'}`} />
+              <span>{isSpeaking ? 'Instrutor Osaias Falando...' : '🔊 Ouvir Voz do Instrutor Osaias'}</span>
+            </button>
+          )}
 
           {/* Nome e Patente */}
           <h3 className="text-xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2">
@@ -400,7 +328,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             )}
 
             {/* Etapa 1: "MEU NOME É OSAIAS, SEU ASSISTENTE VIRTUAL." */}
-            <div className="mb-2">
+            <div className={`transition-opacity duration-300 ${currentStep === 0 ? 'opacity-100 ring-1 ring-amber-500/40 rounded-xl p-2 bg-amber-500/10' : 'opacity-90'}`}>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-1 border border-amber-500/40">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 Apresentação Oficial
@@ -411,15 +339,15 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </div>
 
             {/* Etapa 2: Boas-vindas ao CMT */}
-            <div className={`transition-opacity duration-500 ${currentStep >= 1 ? 'opacity-100' : 'opacity-40'}`}>
-              <p className="text-sm text-slate-200 font-medium leading-relaxed mt-2">
+            <div className={`mt-2 transition-all duration-300 ${currentStep === 1 ? 'ring-1 ring-amber-500/40 rounded-xl p-2 bg-amber-500/10 opacity-100' : currentStep > 1 ? 'opacity-90' : 'opacity-40'}`}>
+              <p className="text-sm text-slate-200 font-medium leading-relaxed">
                 Seja muito bem-vindo(a), <strong className="text-white font-bold">{studentName}</strong>, à plataforma do Colégio Militar Tiradentes XVII!
               </p>
             </div>
 
             {/* Etapa 3: Desejo de bons estudos e potencial */}
-            <div className={`transition-opacity duration-500 ${currentStep >= 2 ? 'opacity-100' : 'opacity-40'}`}>
-              <div className="mt-3 p-2.5 bg-emerald-950/30 rounded-xl border border-emerald-500/30 flex items-start gap-2.5">
+            <div className={`mt-2 transition-all duration-300 ${currentStep === 2 ? 'ring-1 ring-emerald-500/40 rounded-xl p-2 bg-emerald-500/10 opacity-100' : currentStep > 2 ? 'opacity-90' : 'opacity-40'}`}>
+              <div className="p-2.5 bg-emerald-950/30 rounded-xl border border-emerald-500/30 flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <p className="text-xs sm:text-sm text-emerald-200/90 leading-relaxed font-medium">
                   <strong>Desejo a você excelentes estudos!</strong> Acredite sempre no seu potencial: com dedicação, disciplina e foco, a sua vaga e a sua farda estão cada dia mais perto!
@@ -428,8 +356,8 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </div>
 
             {/* Etapa 4: Informação sobre novas questões no sistema */}
-            <div className={`transition-opacity duration-500 ${currentStep >= 3 ? 'opacity-100' : 'opacity-40'}`}>
-              <div className="mt-3 p-3 bg-gradient-to-r from-amber-500/20 via-blue-900/30 to-amber-500/10 rounded-xl border-2 border-amber-400/60 flex items-start gap-2.5 shadow-md">
+            <div className={`mt-2 transition-all duration-300 ${currentStep === 3 ? 'ring-2 ring-amber-400 rounded-xl p-2 bg-amber-500/15 opacity-100' : 'opacity-40'}`}>
+              <div className="p-3 bg-gradient-to-r from-amber-500/20 via-blue-900/30 to-amber-500/10 rounded-xl border-2 border-amber-400/60 flex items-start gap-2.5 shadow-md">
                 <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
                 <div>
                   <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 block mb-0.5">

@@ -15,6 +15,11 @@ app.use(express.json());
 const geminiApiKey = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({
   apiKey: geminiApiKey,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    },
+  },
 });
 
 // =================================================================
@@ -1722,6 +1727,118 @@ app.post('/api/db/record-lesson', async (req, res) => {
   } catch (err: any) {
     console.error('Erro em /api/db/record-lesson:', err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// =================================================================
+// 4.9 ROTA OFICIAL DE TEXT-TO-SPEECH (TTS) COM VOZ MASCULINA GRAVE DO OSAIAS
+// Utiliza Gemini TTS (gemini-3.8-flash-lite-tts com voz prebuilt Fenrir)
+// =================================================================
+const ttsMemoryCache = new Map<string, string>();
+
+app.get('/api/tts/osaias-audio.wav', (req, res) => {
+  const filePath = path.resolve('public/audio/osaias-welcome.wav');
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return fs.createReadStream(filePath).pipe(res);
+  }
+  return res.status(404).json({ error: 'Áudio oficial do Instrutor Osaias não encontrado.' });
+});
+
+app.post('/api/tts/osaias', async (req, res) => {
+  try {
+    const { text, voice = 'Fenrir' } = req.body;
+    const defaultText =
+      'Meu nome é Osaias, seu assistente virtual. Olá, futuro Aluno Tiradentes! Seja muito bem-vindo à plataforma de preparação do Colégio Militar Tiradentes XVII. Desejo a você excelentes estudos! Acredite no seu potencial. Com dedicação, disciplina e foco, a sua vaga e a sua farda estão cada dia mais perto! Atenção: o Simulado Oficial do CMT agora possui 60 questões completas, com 30 de Língua Portuguesa e 30 de Matemática, com gabarito e explicação detalhada para cada erro para você aprender com excelência. Bons estudos rumo à aprovação!';
+
+    const spokenText = text && text.trim() ? text.trim() : defaultText;
+    const cacheKey = `${voice}_${spokenText}`;
+
+    // 1. Verifica cache em memória
+    if (ttsMemoryCache.has(cacheKey)) {
+      return res.json({
+        success: true,
+        voice: voice,
+        audioBase64: ttsMemoryCache.get(cacheKey),
+        audioUrl: '/audio/osaias-welcome.wav',
+        mimeType: 'audio/wav',
+        cached: true,
+      });
+    }
+
+    // 2. Se for o texto padrão e o arquivo estático existir, lê direto do disco
+    const staticWav = path.resolve('public/audio/osaias-welcome.wav');
+    if (spokenText === defaultText && fs.existsSync(staticWav)) {
+      const buffer = fs.readFileSync(staticWav);
+      const b64 = buffer.toString('base64');
+      ttsMemoryCache.set(cacheKey, b64);
+      return res.json({
+        success: true,
+        voice: voice,
+        audioBase64: b64,
+        audioUrl: '/audio/osaias-welcome.wav',
+        mimeType: 'audio/wav',
+        cached: true,
+      });
+    }
+
+    // 3. Gera áudio sob demanda com o modelo gemini-3.8-flash-lite-tts e voz masculina Fenrir
+    const ttsResponse = await ai.models.generateContent({
+      model: 'gemini-3.8-flash-lite-tts',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: spokenText,
+              speechMetadata: {
+                style: 'Voz masculina grave, firme, madura, enérgica e acolhedora de instrutor militar em português do Brasil',
+              },
+            },
+          ],
+        },
+      ],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: voice || 'Fenrir' },
+          },
+        },
+      },
+    });
+
+    const audioBase64 = ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (audioBase64) {
+      ttsMemoryCache.set(cacheKey, audioBase64);
+      return res.json({
+        success: true,
+        voice: voice,
+        audioBase64,
+        audioUrl: '/audio/osaias-welcome.wav',
+        mimeType: 'audio/wav',
+      });
+    }
+
+    return res.status(500).json({ error: 'Não foi possível gerar áudio com voz masculina.' });
+  } catch (err: any) {
+    console.error('Erro na rota TTS Osaias:', err);
+    // Em caso de erro na API do Gemini, faz fallback para o arquivo estático pré-renderizado se existir
+    const staticWav = path.resolve('public/audio/osaias-welcome.wav');
+    if (fs.existsSync(staticWav)) {
+      const buffer = fs.readFileSync(staticWav);
+      const b64 = buffer.toString('base64');
+      return res.json({
+        success: true,
+        voice: 'Fenrir',
+        audioBase64: b64,
+        audioUrl: '/audio/osaias-welcome.wav',
+        mimeType: 'audio/wav',
+        fallback: true,
+      });
+    }
+    return res.status(500).json({ error: err.message || 'Erro ao gerar voz' });
   }
 });
 
