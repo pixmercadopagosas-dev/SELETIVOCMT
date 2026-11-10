@@ -91,11 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:sticky top-0 lg:top-[61px] z-50 lg:z-30 h-full lg:h-[calc(100vh-61px)] w-64 bg-slate-900 text-slate-200 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0 transition-transform duration-200 ease-in-out ${
-          isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed lg:sticky top-0 lg:top-[61px] z-50 lg:z-30 h-full lg:h-[calc(100vh-61px)] w-64 max-w-[85vw] bg-slate-900 text-slate-200 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0 transition-transform duration-200 ease-in-out overflow-y-auto smooth-touch-scroll safe-top safe-bottom ${
+          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
           {/* Mobile close button */}
           <div className="flex items-center justify-between lg:hidden pb-2 border-b border-slate-800">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
@@ -103,7 +103,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <button
               onClick={onCloseMobile}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+              title="Fechar menu lateral"
             >
               <X className="w-5 h-5" />
             </button>
@@ -123,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id as NavTab)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
                       ? isAi
                         ? 'bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md font-bold border border-amber-400/50'

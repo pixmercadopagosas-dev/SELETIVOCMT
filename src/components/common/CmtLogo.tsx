@@ -37,11 +37,12 @@ export const CmtLogo: React.FC<CmtLogoProps> = ({
         }}
       />
       {showText && (
-        <div className="flex flex-col">
-          <span className="font-extrabold tracking-tight text-slate-900 leading-none text-base md:text-lg">
-            COLÉGIO MILITAR <span className="text-blue-900">TIRADENTES XVII</span>
+        <div className="flex flex-col min-w-0">
+          <span className="font-extrabold tracking-tight text-slate-900 leading-none text-xs sm:text-base md:text-lg truncate">
+            <span className="hidden sm:inline">COLÉGIO MILITAR </span>
+            <span className="text-blue-900">TIRADENTES XVII</span>
           </span>
-          <span className="text-[11px] font-semibold text-red-700 tracking-wider uppercase mt-0.5">
+          <span className="hidden sm:block text-[9px] sm:text-[11px] font-semibold text-red-700 tracking-wider uppercase mt-0.5 truncate">
             {subtext}
           </span>
         </div>

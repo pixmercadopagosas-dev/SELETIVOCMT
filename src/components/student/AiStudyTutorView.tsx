@@ -349,12 +349,12 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
         </div>
 
         {/* Tab Navigation Pill Bar */}
-        <div className="flex flex-wrap items-center gap-2 mt-6 pt-5 border-t border-indigo-900/60">
+        <div className="flex items-center gap-2 mt-6 pt-5 border-t border-indigo-900/60 overflow-x-auto smooth-touch-scroll no-scrollbar py-1">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'chat'
-                ? 'bg-amber-400 text-slate-950 shadow-md scale-105'
+                ? 'bg-amber-400 text-slate-950 shadow-md'
                 : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
@@ -367,9 +367,9 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
               setActiveTab('desafio');
               if (!currentChallenge) handleGenerateChallenge();
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'desafio'
-                ? 'bg-amber-400 text-slate-950 shadow-md scale-105'
+                ? 'bg-amber-400 text-slate-950 shadow-md'
                 : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
@@ -379,26 +379,26 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
 
           <button
             onClick={() => setActiveTab('redacao')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'redacao'
-                ? 'bg-amber-400 text-slate-950 shadow-md scale-105'
+                ? 'bg-amber-400 text-slate-950 shadow-md'
                 : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
             <PenTool className="w-4 h-4" />
-            <span>Treinador de Redação & Escrita</span>
+            <span>Treinador de Redação</span>
           </button>
 
           <button
             onClick={() => setActiveTab('macetes')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'macetes'
-                ? 'bg-amber-400 text-slate-950 shadow-md scale-105'
+                ? 'bg-amber-400 text-slate-950 shadow-md'
                 : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
             <Lightbulb className="w-4 h-4 text-yellow-400" />
-            <span>Macetes do Edital CMT XVII</span>
+            <span>Macetes do Edital</span>
           </button>
         </div>
       </div>
@@ -409,7 +409,7 @@ export const AiStudyTutorView: React.FC<AiStudyTutorViewProps> = ({
       {activeTab === 'chat' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Chat Stream */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[650px] overflow-hidden">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[520px] sm:h-[650px] overflow-hidden">
             {/* Chat header */}
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
               <div className="flex items-center gap-3">

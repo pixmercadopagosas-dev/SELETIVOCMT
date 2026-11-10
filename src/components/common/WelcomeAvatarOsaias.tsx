@@ -197,18 +197,18 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
       {/* Container Centralizado */}
-      <div className="relative w-full max-w-lg bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl border-2 border-amber-500/50 shadow-2xl shadow-amber-500/20 overflow-hidden transform transition-all duration-300 scale-100">
+      <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl border-2 border-amber-500/50 shadow-2xl shadow-amber-500/20 overflow-hidden transform transition-all duration-300 scale-100">
         
         {/* Barra superior de contagem e ações */}
-        <div className="relative bg-slate-950/90 px-5 py-3 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="relative bg-slate-950/90 px-4 sm:px-5 py-2.5 sm:py-3 border-b border-slate-800/80 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
-            <span className="relative flex h-3 w-3">
+            <span className="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-emerald-500"></span>
             </span>
-            <span className="text-xs font-bold tracking-wider uppercase text-amber-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              Instrutor Osaias • CMT XVII
+            <span className="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-amber-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+              <span>Instrutor Osaias • CMT XVII</span>
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -216,7 +216,7 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             {/* Botão de voz / mudo */}
             <button
               onClick={toggleMute}
@@ -251,27 +251,27 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
         </div>
 
         {/* Barra de progresso do auto-fechamento */}
-        <div className="w-full bg-slate-800 h-1 overflow-hidden">
+        <div className="w-full bg-slate-800 h-1 overflow-hidden shrink-0">
           <div
             className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-1000 ease-linear"
             style={{ width: `${(secondsLeft / 40) * 100}%` }}
           />
         </div>
 
-        {/* Corpo principal do Avatar e Balão de Fala */}
-        <div className="p-6 text-center flex flex-col items-center">
+        {/* Corpo principal do Avatar e Balão de Fala com rolagem */}
+        <div className="p-4 sm:p-6 text-center flex flex-col items-center overflow-y-auto flex-1 smooth-touch-scroll">
           
           {/* Avatar com moldura militar dourada e pulso */}
           <div
-            className="relative mb-3 group cursor-pointer"
+            className="relative mb-2 sm:mb-3 group cursor-pointer shrink-0"
             onClick={handleReplay}
             title="Clique para ouvir a voz masculina do Instrutor Osaias"
           >
             {/* Halo de luz militar */}
-            <div className="absolute -inset-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 rounded-full blur-md opacity-60 group-hover:opacity-100 animate-pulse transition duration-1000"></div>
+            <div className="absolute -inset-1.5 sm:-inset-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 rounded-full blur-md opacity-60 group-hover:opacity-100 animate-pulse transition duration-1000"></div>
             
-            {/* Imagem do Avatar */}
-            <div className="relative w-36 h-36 rounded-full border-4 border-amber-400 overflow-hidden shadow-2xl bg-slate-800">
+            {/* Imagem do Avatar responsivo */}
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-amber-400 overflow-hidden shadow-2xl bg-slate-800">
               <img
                 src="/assets/aistudio/1792634685275_25b5af36.jpg"
                 alt="Osaias - Assistente Virtual CMT XVII"
@@ -280,8 +280,8 @@ export const WelcomeAvatarOsaias: React.FC<WelcomeAvatarOsaiasProps> = ({
             </div>
 
             {/* Selo do Batalhão / Estrela */}
-            <div className="absolute -bottom-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[11px] px-3 py-0.5 rounded-full shadow-lg border border-yellow-200 flex items-center gap-1 left-1/2 -translate-x-1/2">
-              <Star className="w-3 h-3 fill-slate-950" />
+            <div className="absolute -bottom-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-0.5 rounded-full shadow-lg border border-yellow-200 flex items-center gap-1 left-1/2 -translate-x-1/2">
+              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-slate-950" />
               OSAIAS
             </div>
           </div>

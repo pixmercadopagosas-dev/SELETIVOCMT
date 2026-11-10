@@ -71,50 +71,50 @@ export const ThemeCompanionWidget: React.FC = () => {
         {/* ============================================================== */}
         {currentCartoon === 'ben10_alien' && (
           <div
-            className={`bg-gradient-to-r ${activeAlienProfile.themeGradient} text-white px-3 sm:px-6 py-2.5 relative border-b transition-colors duration-300`}
+            className={`bg-gradient-to-r ${activeAlienProfile.themeGradient} text-white px-2.5 sm:px-6 py-2 sm:py-2.5 relative border-b transition-colors duration-300`}
             style={{ borderColor: `${activeAlienProfile.powerColor}60` }}
           >
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
               {/* Esquerda: Omnitrix + Alien Ativo */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div
                   onClick={() => setOmnitrixModalOpen(true)}
                   className="relative cursor-pointer group shrink-0"
                   title="Clique para girar o Omnitrix e trocar de Alien"
                 >
-                  <OmnitrixDialIcon className="w-10 h-10 group-hover:scale-110 transition-transform" />
+                  <OmnitrixDialIcon className="w-8 h-8 sm:w-10 sm:h-10 group-hover:scale-110 transition-transform" />
                   <span
-                    className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-slate-900 animate-ping"
+                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-slate-900 animate-ping"
                     style={{ backgroundColor: activeAlienProfile.powerColor }}
                   />
                 </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span
-                      className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border flex items-center gap-1 text-white shadow-xs"
+                      className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border flex items-center gap-1 text-white shadow-xs"
                       style={{
                         backgroundColor: `${activeAlienProfile.powerColor}35`,
                         borderColor: activeAlienProfile.powerColor,
                       }}
                     >
-                      <Zap className="w-3 h-3" style={{ color: activeAlienProfile.powerColor }} />
-                      Cor: {activeAlienProfile.colorLabel}
+                      <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" style={{ color: activeAlienProfile.powerColor }} />
+                      <span>{activeAlienProfile.colorLabel}</span>
                     </span>
-                    <span className="text-[10px] font-bold text-slate-300">
+                    <span className="hidden sm:inline text-[10px] font-bold text-slate-300">
                       {activeAlienProfile.alienSeries}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                      {renderThemeIcon(activeAlienProfile.iconName, 'w-5 h-5')}
+                  <div className="flex items-center gap-1.5 truncate">
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center shrink-0">
+                      {renderThemeIcon(activeAlienProfile.iconName, 'w-4 h-4 sm:w-5 sm:h-5')}
                     </div>
-                    <span className="text-sm font-black text-white">
-                      Alien Ativo:{' '}
+                    <span className="text-xs sm:text-sm font-black text-white truncate">
+                      <span className="hidden xs:inline">Alien: </span>
                       <span style={{ color: activeAlienProfile.powerColor }}>{activeAlienProfile.name}</span>
                     </span>
-                    <span className="hidden lg:inline text-xs text-slate-200 italic">
+                    <span className="hidden lg:inline text-xs text-slate-200 italic truncate">
                       — "{activeAlienProfile.quote}"
                     </span>
                   </div>
@@ -123,7 +123,7 @@ export const ThemeCompanionWidget: React.FC = () => {
 
               {/* Centro: Poder especial de estudo do alien */}
               <div
-                className="hidden sm:flex items-center gap-2 border px-3 py-1.5 rounded-xl text-xs text-white"
+                className="hidden md:flex items-center gap-2 border px-3 py-1.5 rounded-xl text-xs text-white shrink-0"
                 style={{
                   backgroundColor: `${activeAlienProfile.powerColor}25`,
                   borderColor: `${activeAlienProfile.powerColor}60`,
@@ -137,14 +137,15 @@ export const ThemeCompanionWidget: React.FC = () => {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setOmnitrixModalOpen(true)}
-                  className="px-3.5 py-1.5 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95"
+                  className="px-2.5 sm:px-3.5 py-1.5 text-white font-black text-[11px] sm:text-xs rounded-xl shadow-lg transition-all flex items-center gap-1 sm:gap-1.5 hover:scale-105 active:scale-95 cursor-pointer"
                   style={{
                     backgroundColor: activeAlienProfile.powerColor,
                     boxShadow: `0 0 15px ${activeAlienProfile.powerColor}80`,
                   }}
                 >
                   <RotateCw className="w-3.5 h-3.5" />
-                  <span>Girar Omnitrix</span>
+                  <span className="hidden xs:inline">Girar </span>
+                  <span>Omnitrix</span>
                 </button>
               </div>
             </div>
@@ -155,42 +156,38 @@ export const ThemeCompanionWidget: React.FC = () => {
         {/* TEMA 2: CYBERPUNK GAMER PRO (ADOLESCENTE MENINOS) */}
         {/* ============================================================== */}
         {currentCartoon === 'cyber_gamer_boy' && (
-          <div className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-950 text-white px-3 sm:px-6 py-2.5 relative border-b border-cyan-800/40">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-950 text-white px-2.5 sm:px-6 py-2 sm:py-2.5 relative border-b border-cyan-800/40">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div
                   onClick={() => setTeenModalOpen(true)}
-                  className="w-10 h-10 rounded-xl bg-cyan-950/80 border-2 border-cyan-400 flex items-center justify-center shrink-0 cursor-pointer hover:scale-110 transition-transform shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-950/80 border-2 border-cyan-400 flex items-center justify-center shrink-0 cursor-pointer hover:scale-110 transition-transform shadow-[0_0_12px_rgba(6,182,212,0.4)]"
                   title="Alterar avatar Gamer"
                 >
-                  {renderThemeIcon(activeTeenProfile.iconName, 'w-7 h-7')}
+                  {renderThemeIcon(activeTeenProfile.iconName, 'w-5 h-5 sm:w-7 sm:h-7')}
                 </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-cyan-900/80 text-cyan-300 px-2 py-0.5 rounded-md border border-cyan-500/50 flex items-center gap-1 font-mono">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-cyan-900/80 text-cyan-300 px-1.5 py-0.5 rounded-md border border-cyan-500/50 flex items-center gap-1 font-mono">
                       <Gamepad2 className="w-3 h-3 text-cyan-400" />
-                      Modo Gamer Pro • 144 FPS
+                      <span>144 FPS</span>
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      Adolescente
+                    <span className="hidden sm:inline text-[10px] font-bold text-slate-400">
+                      Modo Gamer Pro
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-white">
-                      Player:{' '}
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-xs sm:text-sm font-black text-white truncate">
                       <span className="text-cyan-400">{activeTeenProfile.name}</span>
-                    </span>
-                    <span className="hidden lg:inline text-xs text-slate-300 italic">
-                      — "{activeTeenProfile.quote}"
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Traits Gamer */}
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 {activeTeenProfile.subtraits.map((trait, i) => (
                   <span
                     key={i}
@@ -204,10 +201,10 @@ export const ThemeCompanionWidget: React.FC = () => {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setTeenModalOpen(true)}
-                  className="px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 font-mono"
+                  className="px-2.5 sm:px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-[11px] sm:text-xs rounded-xl shadow-lg transition-all flex items-center gap-1 sm:gap-1.5 hover:scale-105 active:scale-95 font-mono cursor-pointer"
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  <span>Configurar Rig</span>
+                  <span>Rig</span>
                 </button>
               </div>
             </div>
@@ -218,59 +215,40 @@ export const ThemeCompanionWidget: React.FC = () => {
         {/* TEMA 3: AESTHETIC GIRL & Y2K POP (ADOLESCENTE MENINAS) */}
         {/* ============================================================== */}
         {currentCartoon === 'aesthetic_y2k_girl' && (
-          <div className="bg-gradient-to-r from-purple-950 via-pink-950 to-slate-950 text-white px-3 sm:px-6 py-2.5 relative border-b border-pink-700/40">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-purple-950 via-pink-950 to-slate-950 text-white px-2.5 sm:px-6 py-2 sm:py-2.5 relative border-b border-pink-700/40">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div
                   onClick={() => setTeenModalOpen(true)}
-                  className="w-10 h-10 rounded-2xl bg-pink-950/80 border-2 border-pink-400 flex items-center justify-center shrink-0 cursor-pointer hover:scale-110 transition-transform shadow-[0_0_12px_rgba(236,72,153,0.4)]"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-pink-950/80 border-2 border-pink-400 flex items-center justify-center shrink-0 cursor-pointer hover:scale-110 transition-transform shadow-[0_0_12px_rgba(236,72,153,0.4)]"
                   title="Alterar avatar Aesthetic"
                 >
-                  {renderThemeIcon(activeTeenProfile.iconName, 'w-7 h-7')}
+                  {renderThemeIcon(activeTeenProfile.iconName, 'w-5 h-5 sm:w-7 sm:h-7')}
                 </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-pink-900/80 text-pink-200 px-2 py-0.5 rounded-md border border-pink-500/50 flex items-center gap-1">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-pink-900/80 text-pink-200 px-1.5 py-0.5 rounded-md border border-pink-500/50 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-pink-400" />
-                      Aesthetic Study Glow ✨
-                    </span>
-                    <span className="text-[10px] font-bold text-pink-300">
-                      Adolescente
+                      <span>Study Glow ✨</span>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-white">
-                      Mood:{' '}
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-xs sm:text-sm font-black text-white truncate">
                       <span className="text-pink-300">{activeTeenProfile.name}</span>
                     </span>
-                    <span className="hidden lg:inline text-xs text-pink-200/90 italic">
-                      — "{activeTeenProfile.quote}"
-                    </span>
                   </div>
                 </div>
-              </div>
-
-              {/* Subtraits Aesthetic */}
-              <div className="hidden sm:flex items-center gap-2">
-                {activeTeenProfile.subtraits.map((trait, i) => (
-                  <span
-                    key={i}
-                    className="text-[11px] font-bold bg-pink-950/70 border border-pink-400/30 text-pink-200 px-2.5 py-1 rounded-lg"
-                  >
-                    {trait}
-                  </span>
-                ))}
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setTeenModalOpen(true)}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95"
+                  className="px-2.5 sm:px-3.5 py-1.5 bg-pink-500 hover:bg-pink-400 text-white font-black text-[11px] sm:text-xs rounded-xl shadow-lg transition-all flex items-center gap-1 sm:gap-1.5 hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
-                  <span>Estilo Aesthetic</span>
+                  <span>Avatar</span>
                 </button>
               </div>
             </div>
@@ -417,7 +395,7 @@ export const ThemeCompanionWidget: React.FC = () => {
       {/* ============================================================== */}
       {teenModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-950 rounded-3xl border-2 border-cyan-500 max-w-xl w-full p-6 sm:p-8 space-y-6 relative shadow-2xl text-white">
+          <div className="bg-slate-950 rounded-3xl border-2 border-cyan-500 max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-8 space-y-6 relative shadow-2xl text-white">
             <button
               onClick={() => setTeenModalOpen(false)}
               className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800"

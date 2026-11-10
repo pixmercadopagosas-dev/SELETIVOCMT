@@ -67,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       .join('') || (currentUser ? currentUser.username.substring(0, 2).toUpperCase() : 'CM');
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 py-2.5 shadow-xs relative">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-2 sm:px-6 py-2 sm:py-2.5 shadow-xs relative safe-top">
       {/* Dynamic Theme Color Top Strip */}
       <div
         className="absolute top-0 left-0 right-0 h-1 transition-all duration-300"
@@ -76,13 +76,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           boxShadow: `0 0 10px ${currentAccentColor}80`,
         }}
       />
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Left: Mobile hamburger + Logo */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              className="p-2 lg:hidden text-slate-700 hover:text-blue-900 rounded-xl hover:bg-slate-100 transition-colors"
+              className="p-1.5 sm:p-2 lg:hidden text-slate-700 hover:text-blue-900 rounded-xl hover:bg-slate-100 transition-colors shrink-0"
               title="Abrir menu lateral"
               aria-label="Abrir menu"
             >
@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
           {currentUser && (
             <>
               {/* Grade indicator */}
@@ -105,19 +105,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Study Streak */}
               <div
-                className="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold"
+                className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] sm:text-xs font-bold"
                 title={`${currentUser.study_streak_days} dias seguidos de dedicação`}
               >
-                <Flame className="w-4 h-4 text-orange-500 fill-orange-500 animate-pulse" />
+                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 fill-orange-500 animate-pulse" />
                 <span>{currentUser.study_streak_days}d</span>
               </div>
 
               {/* Stars */}
               <div
-                className="flex items-center gap-1 px-2 py-1 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-xs font-bold"
+                className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-[11px] sm:text-xs font-bold"
                 title={`${currentUser.total_stars} estrelas`}
               >
-                <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-400" />
                 <span>{currentUser.total_stars}</span>
               </div>
 
@@ -125,15 +125,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenOsaias && (
                 <button
                   onClick={onOpenOsaias}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-md border border-amber-300 transition-all transform hover:scale-105 active:scale-95"
+                  className="flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-md border border-amber-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
                   title="Falar com Instrutor Osaias (Assistente Virtual)"
                 >
                   <img
                     src="/assets/aistudio/1792634685275_25b5af36.jpg"
                     alt="Osaias"
-                    className="w-5 h-5 rounded-full object-cover border border-slate-900 shadow-xs"
+                    className="w-5 h-5 rounded-full object-cover border border-slate-900 shadow-xs shrink-0"
                   />
-                  <span className="hidden sm:inline">Osaias</span>
+                  <span className="hidden md:inline">Osaias</span>
                 </button>
               )}
             </>
@@ -142,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Theme & Cartoon Selector Button */}
           <button
             onClick={onOpenThemeModal}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-black rounded-xl transition-all shadow-xs border ${
+            className={`flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-black rounded-xl transition-all shadow-xs border cursor-pointer ${
               currentCartoon === 'cyber_gamer_boy'
                 ? 'bg-slate-950 text-cyan-300 border-cyan-500 hover:bg-slate-900 shadow-cyan-500/20'
                 : currentCartoon === 'aesthetic_y2k_girl'
@@ -167,9 +167,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <>
                 <OmnitrixDialIcon className="w-4 h-4" />
                 <span className="hidden md:inline font-black" style={{ color: activeAlienProfile.powerColor }}>
-                  {activeAlienProfile.name} ({activeAlienProfile.colorLabel})
-                </span>
-                <span className="md:hidden" style={{ color: activeAlienProfile.powerColor }}>
                   {activeAlienProfile.name}
                 </span>
               </>
@@ -177,18 +174,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               <>
                 {renderThemeIcon(activeTeenProfile.iconName, 'w-4 h-4')}
                 <span className="hidden md:inline text-cyan-300">{activeTeenProfile.name}</span>
-                <span className="md:hidden">Gamer</span>
               </>
             ) : currentCartoon === 'aesthetic_y2k_girl' ? (
               <>
                 {renderThemeIcon(activeTeenProfile.iconName, 'w-4 h-4')}
                 <span className="hidden md:inline text-pink-200">{activeTeenProfile.name}</span>
-                <span className="md:hidden">Aesthetic</span>
               </>
             ) : (
               <>
                 <Palette className="w-4 h-4 text-purple-600" />
-                <span className="hidden md:inline">Cores & Temas</span>
+                <span className="hidden md:inline">Temas</span>
               </>
             )}
           </button>
@@ -197,11 +192,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentUser?.role === 'superusuario' && (
             <button
               onClick={onOpenSupabaseStatus}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border-2 border-emerald-400 rounded-xl transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-black text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border-2 border-emerald-400 rounded-xl transition-all shadow-xs cursor-pointer"
               title="Acesso exclusivo do Superusuário: Abrir Aba de Teste de Conexão com o Banco de Dados"
             >
-              <Database className="w-3.5 h-3.5 text-emerald-700 animate-pulse" />
-              <span>Aba Teste de Banco</span>
+              <Database className="w-3.5 h-3.5 text-emerald-700 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">Aba Teste</span>
               <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
             </button>
           )}
@@ -209,13 +204,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Notifications Bell */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 text-slate-600 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-colors"
+            className="relative p-1.5 sm:p-2 text-slate-600 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-colors shrink-0 cursor-pointer"
             title="Central de Notificações"
             aria-label="Central de Notificações"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
             {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce">
+              <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-red-600 text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce">
                 {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
               </span>
             )}
@@ -226,12 +221,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowSwitchMenu(!showSwitchMenu)}
-                className="flex items-center gap-2 p-1.5 pl-2 pr-3 hover:bg-slate-100 rounded-2xl transition-colors border border-slate-200 shadow-xs"
+                className="flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 sm:pl-2 sm:pr-3 hover:bg-slate-100 rounded-2xl transition-colors border border-slate-200 shadow-xs cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-900 to-indigo-700 text-white font-extrabold flex items-center justify-center text-xs shadow-inner shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-blue-900 to-indigo-700 text-white font-extrabold flex items-center justify-center text-xs shadow-inner shrink-0">
                   {displayInitials}
                 </div>
-                <div className="hidden sm:flex flex-col text-left max-w-[140px]">
+                <div className="hidden lg:flex flex-col text-left max-w-[140px]">
                   {/* Nome escolhido no cadastro com prioridade */}
                   <span className="text-xs font-extrabold text-slate-900 leading-tight truncate">
                     {displayName}

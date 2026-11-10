@@ -41,6 +41,7 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
   const [selectedFriend, setSelectedFriend] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
+  const [mobileTab, setMobileTab] = useState<'colegas' | 'chat'>('colegas');
   // Modo de digitação: 'me' = digitando como o aluno atual; 'peer' = digitando resposta real como o colega
   const [chatSenderMode, setChatSenderMode] = useState<'me' | 'peer'>('me');
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
@@ -247,12 +248,42 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
         </div>
       </div>
 
+      {/* Mobile Tab Control (Smartphones: iPhone / Android) */}
+      <div className="lg:hidden flex bg-slate-100 p-1 rounded-2xl border border-slate-200 gap-1">
+        <button
+          type="button"
+          onClick={() => setMobileTab('colegas')}
+          className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            mobileTab === 'colegas'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Colegas ({friends.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('chat')}
+          className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            mobileTab === 'chat'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span className="truncate">
+            Conversa {selectedFriend ? `(${selectedFriend.full_name.split(' ')[0]})` : ''}
+          </span>
+        </button>
+      </div>
+
       {/* Main Grid: Friends & Chat */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col: Friends List, Search, Suggestions, Requests */}
-        <div className="space-y-4">
+        <div className={`space-y-4 ${mobileTab === 'colegas' ? 'block' : 'hidden lg:block'}`}>
           {/* Add Friend & Search Box */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-blue-900" />
@@ -341,8 +372,11 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
                           <div className="shrink-0">
                             {relation === 'friends' ? (
                               <button
-                                onClick={() => setSelectedFriend(peer)}
-                                className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-[10px] font-bold inline-flex items-center gap-1"
+                                onClick={() => {
+                                  setSelectedFriend(peer);
+                                  setMobileTab('chat');
+                                }}
+                                className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Check className="w-3 h-3" />
                                 <span>Amigo</span>
@@ -563,8 +597,9 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
                           await db.respondFriendRequest(toUser.id, request.id, true);
                           await loadCommunityData();
                           setSelectedFriend(toUser);
+                          setMobileTab('chat');
                         }}
-                        className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[9px] font-bold flex items-center gap-1 transition-colors"
+                        className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[9px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                         title="Simular que o colega aceitou a notificação"
                       >
                         <Check className="w-3 h-3 text-emerald-600" />
@@ -608,8 +643,11 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
                   return (
                     <button
                       key={friend.id}
-                      onClick={() => setSelectedFriend(friend)}
-                      className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
+                      onClick={() => {
+                        setSelectedFriend(friend);
+                        setMobileTab('chat');
+                      }}
+                      className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all min-h-[44px] cursor-pointer ${
                         isSelected
                           ? 'bg-blue-900 text-white shadow-md'
                           : 'hover:bg-slate-50 text-slate-800 border border-slate-100'
@@ -645,53 +683,63 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
         </div>
 
         {/* Right 2 cols: Chat View & Ideas Exchange */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[650px] overflow-hidden">
+        <div className={`lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[560px] sm:h-[650px] overflow-hidden ${
+          mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'
+        }`}>
           {selectedFriend ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-900 text-white font-bold flex items-center justify-center text-xs relative shadow-xs">
+              <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <button
+                    onClick={() => setMobileTab('colegas')}
+                    className="lg:hidden p-2 text-slate-600 hover:text-blue-900 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors shrink-0 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                    title="Voltar para a lista de colegas"
+                  >
+                    <span>←</span>
+                    <span className="hidden xs:inline">Colegas</span>
+                  </button>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-900 text-white font-bold flex items-center justify-center text-xs relative shadow-xs shrink-0">
                     {selectedFriend.username.substring(0, 2).toUpperCase()}
                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <span>{selectedFriend.full_name}</span>
-                      <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                  <div className="min-w-0">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                      <span className="truncate">{selectedFriend.full_name}</span>
+                      <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full border border-emerald-300 shrink-0">
                         Online
                       </span>
                     </h3>
-                    <p className="text-[11px] text-slate-500">
-                      @{selectedFriend.username} • Colega do {selectedFriend.grade === '6_ano' ? '6º Ano' : '7º Ano'}
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      @{selectedFriend.username} • {selectedFriend.grade === '6_ano' ? '6º Ano' : '7º Ano'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {onSwitchUser && (
                     <button
                       onClick={() => onSwitchUser(selectedFriend.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors shadow-2xs cursor-pointer"
                       title={`Entrar na conta de @${selectedFriend.username} para responder como ela`}
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-blue-700" />
+                      <RefreshCw className="w-3 h-3 text-blue-700" />
                       <span className="hidden sm:inline">Entrar como @{selectedFriend.username}</span>
                     </button>
                   )}
                   <button
                     onClick={() => loadChat(selectedFriend.id)}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50 transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50 transition-colors cursor-pointer"
                     title="Atualizar mensagens"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setReportModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>Denunciar</span>
+                    <span className="hidden xs:inline">Denunciar</span>
                   </button>
                 </div>
               </div>
@@ -784,29 +832,29 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
               </div>
 
               {/* Seletor de Remetente (Garante conversa real digitada por humanos) */}
-              <div className="px-3 pt-2.5 pb-1 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+              <div className="px-3 pt-2.5 pb-1 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 text-xs">
+                <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setChatSenderMode('me')}
-                    className={`px-3 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`flex-1 xs:flex-none px-3 py-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                       chatSenderMode === 'me'
                         ? 'bg-blue-900 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <span>✍️ Digitar como Você ({currentUser.full_name.split(' ')[0]})</span>
+                    <span>✍️ Você ({currentUser.full_name.split(' ')[0]})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setChatSenderMode('peer')}
-                    className={`px-3 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`flex-1 xs:flex-none px-3 py-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                       chatSenderMode === 'peer'
                         ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <span>💬 Digitar resposta como {selectedFriend.full_name.split(' ')[0]}</span>
+                    <span>💬 {selectedFriend.full_name.split(' ')[0]}</span>
                   </button>
                 </div>
 
@@ -814,9 +862,9 @@ export const StudyCommunity: React.FC<StudyCommunityProps> = ({ currentUser, onS
                   <button
                     type="button"
                     onClick={() => onSwitchUser(selectedFriend.id)}
-                    className="text-[11px] text-blue-800 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] text-blue-800 hover:underline font-bold flex items-center justify-center sm:justify-start gap-1 cursor-pointer py-1"
                   >
-                    <span>Ou alternar perfil para @{selectedFriend.username}</span>
+                    <span>Alternar conta para @{selectedFriend.username}</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 )}

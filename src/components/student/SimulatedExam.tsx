@@ -86,6 +86,7 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   const [resultAttempt, setResultAttempt] = useState<QuizAttempt | null>(null);
 
   // Estados da revisão comentada e explicações pedagógicas
+  const [mobileGridOpen, setMobileGridOpen] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'todos' | 'erros' | 'acertos'>('todos');
   const [expandedSolutions, setExpandedSolutions] = useState<Record<number, boolean>>({});
 
@@ -520,52 +521,66 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-200">
       {/* Top Exam Header with Timer & Submit */}
-      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+      <div className="bg-slate-900 text-white rounded-2xl p-3 sm:p-5 shadow-lg flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 sticky top-[54px] sm:top-[61px] z-20 border border-slate-800">
+        <div className="min-w-0">
+          <span className="text-[9px] sm:text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
             SIMULADO OFICIAL • EDITAL Nº 001/26 CMT XVII
           </span>
-          <h2 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
-            <span>Simulado 6º Ano (60 Questões)</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/40">
+          <h2 className="text-sm sm:text-lg font-extrabold text-white flex items-center gap-1.5 sm:gap-2 truncate">
+            <span>Simulado 6º Ano (60Q)</span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] sm:text-[10px] font-black border border-emerald-400/40 shrink-0">
               30 Port + 30 Mat
             </span>
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Timer display */}
-          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-amber-400 font-mono font-bold text-base shadow-inner">
-            <Clock className="w-5 h-5 text-amber-400" />
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-800 border border-slate-700 px-2.5 sm:px-4 py-1 sm:py-2 rounded-xl text-amber-400 font-mono font-bold text-xs sm:text-base shadow-inner">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
             <span>{formatTimer(secondsRemaining)}</span>
           </div>
 
           {/* Finish button */}
           <button
             onClick={() => setShowConfirmModal(true)}
-            className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
+            className="px-3 sm:px-5 py-1.5 sm:py-2.5 bg-red-600 hover:bg-red-500 text-white text-[11px] sm:text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102 cursor-pointer"
           >
-            Entregar Simulado
+            Entregar
           </button>
         </div>
       </div>
 
       {/* Banner Informativo do Simulado de 60 Questões */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-blue-900/10 to-amber-500/10 border border-amber-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-800 bg-white shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
-          <span>
-            <strong>Simulado Completo de 60 Questões:</strong> 30 de Língua Portuguesa (1 a 30) e 30 de Matemática (31 a 60). Regra do Edital (Art. 25): mínimo de 30% em cada disciplina (9 acertos em Português e 9 em Matemática). Ao entregar, veja a explicação detalhada de cada erro para aprender!
+      <div className="bg-gradient-to-r from-amber-500/10 via-blue-900/10 to-amber-500/10 border border-amber-500/40 rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-slate-800 bg-white shadow-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+          <span className="leading-snug">
+            <strong>Simulado de 60 Questões:</strong> 30 de Português (1 a 30) e 30 de Matemática (31 a 60). Regra do Edital: mínimo de 30% por disciplina (9 acertos em cada). Ao entregar, veja a explicação detalhada de cada erro!
           </span>
         </div>
-        <span className="shrink-0 text-[11px] font-black uppercase text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-300">
-          60 Questões Comentadas
+        <span className="shrink-0 text-[10px] sm:text-[11px] font-black uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+          Gabarito Comentado
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Botão de alternar grade de questões no celular */}
+      <div className="lg:hidden">
+        <button
+          onClick={() => setMobileGridOpen(!mobileGridOpen)}
+          className="w-full flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 shadow-xs cursor-pointer active:bg-slate-50"
+        >
+          <span className="flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 text-blue-900" />
+            <span>Grade de Questões ({answeredCount}/{totalQuestions} Respondidas)</span>
+          </span>
+          <span className="text-blue-900 font-extrabold">{mobileGridOpen ? '▲ Ocultar' : '▼ Ver Grade'}</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Left Column: Questions Grid & Stats (Dividido em Português e Matemática) */}
-        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
+        <div className={`lg:col-span-1 bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4 ${mobileGridOpen ? 'block' : 'hidden lg:block'}`}>
           <div className="flex items-center justify-between text-xs font-bold text-slate-700 pb-2 border-b border-slate-100">
             <span>Todas as Questões</span>
             <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-mono text-[11px]">
@@ -603,7 +618,10 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
                   return (
                     <button
                       key={idx}
-                      onClick={() => setCurrentIndex(idx)}
+                      onClick={() => {
+                        setCurrentIndex(idx);
+                        setMobileGridOpen(false);
+                      }}
                       className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors relative cursor-pointer ${style}`}
                     >
                       {idx + 1}
@@ -646,7 +664,10 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
                   return (
                     <button
                       key={idx}
-                      onClick={() => setCurrentIndex(idx)}
+                      onClick={() => {
+                        setCurrentIndex(idx);
+                        setMobileGridOpen(false);
+                      }}
                       className={`h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors relative cursor-pointer ${style}`}
                     >
                       {idx + 1}
@@ -677,65 +698,65 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
         </div>
 
         {/* Right Column: Question Statement and Options */}
-        <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 flex flex-col justify-between">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                <span className="px-2.5 py-1 bg-slate-100 rounded-md text-slate-800">
-                  Questão {currentIndex + 1} de {totalQuestions}
+        <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-8 space-y-5 sm:space-y-6 flex flex-col justify-between">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-slate-600 flex-wrap">
+                <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-slate-100 rounded-md text-slate-800">
+                  Questão {currentIndex + 1}/{totalQuestions}
                 </span>
                 <span>•</span>
                 {currentIndex < portugueseCount ? (
                   <span className="text-blue-900 flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5" /> Língua Portuguesa
+                    <BookOpen className="w-3.5 h-3.5 shrink-0" /> Língua Portuguesa
                   </span>
                 ) : (
                   <span className="text-red-800 flex items-center gap-1">
-                    <Calculator className="w-3.5 h-3.5" /> Matemática
+                    <Calculator className="w-3.5 h-3.5 shrink-0" /> Matemática
                   </span>
                 )}
               </div>
 
               <button
                 onClick={() => toggleFlag(currentIndex)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0 ${
                   flaggedForReview[currentIndex]
                     ? 'bg-amber-100 text-amber-900 border border-amber-300'
                     : 'text-slate-500 hover:bg-slate-100'
                 }`}
               >
                 <Flag className="w-3.5 h-3.5" />
-                <span>{flaggedForReview[currentIndex] ? 'Marcada p/ Revisar' : 'Revisar depois'}</span>
+                <span className="hidden xs:inline">{flaggedForReview[currentIndex] ? 'Marcada' : 'Revisar depois'}</span>
               </button>
             </div>
 
             {/* Statement */}
-            <div className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
+            <div className="text-sm sm:text-lg font-bold text-slate-900 leading-relaxed break-words">
               {currentQ.statement}
             </div>
 
             {/* 5 Alternatives A to E */}
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {currentQ.options.map((opt) => {
                 const isSelected = selectedAnswers[currentIndex] === opt.letter;
                 return (
                   <button
                     key={opt.letter}
                     onClick={() => handleSelectOption(opt.letter)}
-                    className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
+                    className={`w-full min-h-[48px] p-3 sm:p-4 rounded-2xl border text-left flex items-start gap-3 sm:gap-3.5 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-blue-900 bg-blue-50/70 ring-2 ring-blue-900'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-extrabold ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-extrabold ${
                         isSelected ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       {opt.letter}
                     </div>
-                    <div className="text-xs sm:text-sm font-medium text-slate-800 pt-1 leading-snug">
+                    <div className="text-xs sm:text-sm font-medium text-slate-800 pt-0.5 sm:pt-1 leading-snug break-words flex-1">
                       {opt.text}
                     </div>
                   </button>
@@ -745,11 +766,11 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
           </div>
 
           {/* Navigation Controls */}
-          <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-4 sm:pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
             <button
               onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
               disabled={currentIndex === 0}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+              className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Anterior</span>
@@ -758,7 +779,7 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
             {currentIndex < totalQuestions - 1 ? (
               <button
                 onClick={() => setCurrentIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
               >
                 <span>Próxima</span>
                 <ArrowRight className="w-4 h-4" />
@@ -766,9 +787,9 @@ export const SimulatedExam: React.FC<SimulatedExamProps> = ({
             ) : (
               <button
                 onClick={() => setShowConfirmModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                className="min-h-[44px] flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
               >
-                <span>Finalizar Simulado</span>
+                <span>Finalizar</span>
               </button>
             )}
           </div>
